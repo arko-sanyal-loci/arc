@@ -9,7 +9,12 @@
 |---|---|---|
 | `app/server.py` | FastAPI server, WebSocket, MCP endpoint, lifespan wiring | `lifespan()`, `ChatRequest`, `IngestRequest`, `mcp_endpoint()` |
 | `core/heartbeat.py` | 140ms tick engine, /dev/shm ring, worker health tracking | `HeartbeatEngine`, `SHMRing`, `WorkerState`, `WorkerStatus` |
-| `core/tiered_memory.py` | 3-tier VRAM/DDR5/NVMe placement ledger | `TieredMemoryManager`, `plan_migrations()`, `heat_to_tier()`, `MigrationPlan`, `NodePlacement`, `TierCapacity`, `TierStats` |
+| `core/tiered_memory.py` | 3-tier VRAM/DDR5/NVMe placement ledger | `TieredMemoryManager`, `plan_migrations()`, `heat_to_tier()`, `target_tier()`, `commit_migration()`, `MigrationPlan`, `NodePlacement`, `TierCapacity`, `TierStats` |
+| `core/context_compression.py` | LOCI LDCE context compression: kernel / hop (symbol) / offload, LOCI DB source, VRAM pin bridge | `compute_tiers()`, `render()`, `sync_placements()`, `LociMemorySource`, `build_context()`, `LDCE_SOURCE` |
+| `docs/HYBRID_INFERENCE_DESIGN.md` | Hybrid local-first + remote-oversight engine design and plan | — |
+| `scripts/arc_repair_and_update.sh` | Diagnose-first dpkg repair; drivers, CUDA, B70 runtimes, firmware (WSL-aware) | — |
+| `scripts/setup_terminal.sh` | Friendly terminal: Starship, fzf, zoxide, eza, `arc` status card | — |
+| `tests/test_tiered_memory.py`, `tests/test_context_compression.py` | 19 tests incl. LDCE parity with LOCI | — |
 | `core/engine_sync.py` | Loci ↔ SQLite ↔ /dev/shm sync on every Nth heartbeat tick | `EngineSync`, `EngineState`, `_ensure_tables()`, `_count_rows()` |
 | `core/gpu_offload.py` | VRAM query + RTX↔B70 offload policy + SHM staging | `GPUOffloadManager`, `SHMStager`, `decide_offload()`, `query_vram()`, `VRAMStats`, `OffloadDecision`, `OffloadDir` |
 | `core/api_provision.py` | Multi-provider gateway (LOCAL→NEXOS→XAI) | `APIProvisioner`, `APIKeys`, `Provider`, `ProviderHealth`, `ChatMessage`, `CompletionRequest`, `CompletionResponse`, `health_check_all()` |
@@ -24,8 +29,8 @@
 | `loci/overlap.py` | Node overlap / deduplication | — |
 | `loci/reconcile_tick.py` | Per-tick reconciliation pass | — |
 | `loci/playground.py` | Playground nodes (speculative/ephemeral memory) | — |
-| `arko-sanyal-loci/LOCI-Coordinate-BUS/coordination_bus/bus.py` | Cross-process coordination bus | — |
-| `arko-sanyal-loci/LOCI-Coordinate-BUS/coordination_bus/mcp_server.py` | MCP server for coordination bus | — |
+| `arko-sanyal-loci/LOCI-MEMORY-ENGINE/coordination_bus/bus.py` | Cross-process coordination bus (canonical) | — |
+| `arko-sanyal-loci/LOCI-MEMORY-ENGINE/coordination_bus/mcp_server.py` | MCP server for coordination bus | — |
 | `start.sh` | Startup orchestration: env, dirs, shm, DB, GPU check, uvicorn | — |
 | `data/review_pass_opus.md` | Code review record — 9 bugs fixed | — |
 

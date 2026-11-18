@@ -62,8 +62,8 @@ It gives a local model the same persistent memory, context compression, and fail
 
 | Component | Spec | Role |
 |---|---|---|
-| **Intel Arc B70** | 32 GB GDDR6 · 608 GB/s · 367 AI TOPS | Deep lane (Y=1) — model weights |
-| **RTX 5060 Ti** | 16 GB GDDR7 · 448 GB/s · 759 AI TOPS | Fast lane (Y=0) — active inference |
+| **Intel Arc Pro B70** | 32 GB GDDR6 ECC · 608 GB/s · 367 INT8 TOPS | Expand lane (Y=1) — target model + speculative draft |
+| **RTX 5060 Ti** | 16 GB GDDR7 · 448 GB/s · 759 AI TOPS · Blackwell (sm_120, CUDA 12.8+) | Compact lane (Y=0) — always-warm small models, embeddings, checks |
 | **DDR5-5200** | 32 GB · 41.6 GB/s real (XMP1 required) | Warm node buffer |
 | **NVMe SSD** | PCIe 4.0+ · ~7 GB/s | Cold node persistence |
 | **Inter-bus** | `/dev/shm` · 7.9 GB/s sustained | Cross-GPU channel |
@@ -95,6 +95,21 @@ bash start.sh
 
 ---
 
+### Workstation setup (GPU box)
+
+```bash
+bash scripts/arc_repair_and_update.sh            # diagnose only, changes nothing
+sudo bash scripts/arc_repair_and_update.sh --repair   # fix a broken dpkg state
+sudo bash scripts/arc_repair_and_update.sh --update   # drivers, CUDA 12.8+, B70 runtimes, firmware
+bash scripts/setup_terminal.sh                   # Starship prompt, fzf, zoxide, `arc` status card
+```
+
+The repair script detects WSL2 and then leaves GPU kernel drivers to Windows.
+`scripts/install_drivers.sh` is superseded for packages (it pins CUDA 12.4,
+which cannot drive Blackwell).
+
+---
+
 ## Directory structure
 
 ```
@@ -104,6 +119,7 @@ arc/
 │   ├── engine_sync.py      # Loci ↔ SQLite WAL sync (every 50 ticks)
 │   ├── gpu_offload.py      # Dynamic VRAM offload Arc B70 ↔ RTX 5060 Ti
 │   ├── tiered_memory.py    # 3-tier placement: VRAM / DDR5 / NVMe by heat
+│   ├── context_compression.py # LOCI LDCE: what enters the prompt (kernel/hop/offload)
 │   └── api_provision.py    # Provider router: LOCAL → NEXOS → XAI
 │
 ├── app/
@@ -129,7 +145,9 @@ arc/
 │   └── antigravity.json    # Antigravity 2.0 IDE panels + tasks
 │
 ├── tests/
-│   └── bench_bus_fidelity.py  # SHM ring sizing benchmark
+│   ├── test_tiered_memory.py        # on/offload ledger, decay, hysteresis
+│   ├── test_context_compression.py  # LDCE parity with LOCI-MEMORY-ENGINE
+│   └── bench_bus_fidelity.py        # SHM ring sizing benchmark
 │
 ├── data/
 │   └── bench_bus_fidelity.json  # Benchmark results (4 MiB recommendation)
@@ -141,18 +159,31 @@ arc/
 
 ---
 
-## Memory tiers
+## Memory: two questions, two modules
 
-Arc maps every Loci SLP node to a storage tier by its heat value `H ∈ [0, 1]`:
+**What enters the prompt** follows the LOCI engine's LDCE, parity-tested
+against `LOCI-MEMORY-ENGINE` (`core/context_compression.py`):
 
-| Tier | Heat range | Storage | Why |
+| LDCE tier | Heat | Max items | In the prompt as |
 |---|---|---|---|
-| **VRAM** | H ≥ 0.70 | 48 GB aggregate | Active inference — sub-ms latency |
-| **DDR5** | 0.35 ≤ H < 0.70 | 32 GB DDR5-5200 | Recent context — µs latency |
-| **NVMe** | H < 0.35 | SSD | Cold history — ms latency, unlimited depth |
+| **kernel** | H ≥ 0.50 | 7 | full text (stable prefix, KV-cached) |
+| **hop** | H ≥ 0.167 | 15 | one-line symbol; full text via `arc_memory_expand` |
+| **offload** | below | 50 | nothing; reachable via `arc_memory_search` |
 
-Heat increases on access and decays over time (`DECAY_GAMMA = 0.98` per tick).  
-Nodes are promoted and demoted automatically every 50 heartbeat ticks.
+Set `LOCI_DB_PATH` to a LOCI `context2.db` (opened read-only) to turn it on.
+Over budget, kernel items degrade to symbols rather than being dropped.
+
+**Where that text is held** is the placement ledger (`core/tiered_memory.py`):
+
+| Tier | Heat | Storage |
+|---|---|---|
+| **VRAM** | promote at H ≥ 0.80, stay while H ≥ 0.70 | B70 + RTX |
+| **DDR5** | 0.35 ≤ H < 0.80 | 32 GB DDR5-5200 |
+| **NVMe** | H < 0.35 | SSD |
+
+Heat decays hyperbolically, `h / (1 + t/τ)`, from the heat at last access
+(τ by memory class). Kernel items are pinned to VRAM. Migrations are
+planned and committed on every heartbeat sync (about 7 s).
 
 ### SLP fidelity levels
 
@@ -169,6 +200,9 @@ Nodes are promoted and demoted automatically every 50 heartbeat ticks.
 ---
 
 ## Provider routing
+
+> Planned: local-first hybrid engine with paid remote oversight. See
+> [docs/HYBRID_INFERENCE_DESIGN.md](docs/HYBRID_INFERENCE_DESIGN.md).
 
 Arc routes completions through a priority chain:
 
@@ -192,6 +226,7 @@ Arc exposes an MCP server at `POST /mcp`. Tools available to any MCP client:
 |---|---|
 | `arc_chat` | Single-turn or streaming chat |
 | `arc_memory_search` | Search Loci SQLite nodes by content |
+| `arc_memory_expand` | Full text of a LOCI memory item shown as a symbol |
 | `arc_status` | Heartbeat tick, GPU utilisation, provider health |
 
 Antigravity 2.0 IDE connects automatically via `config/antigravity.json`.

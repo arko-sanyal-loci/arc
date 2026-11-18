@@ -40,6 +40,7 @@ from core.engine_sync    import EngineSync
 from core.gpu_offload    import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
 from core.api_provision  import APIProvisioner, CompletionRequest, ChatMessage, Provider
 from core.tiered_memory  import TieredMemoryManager, plan_migrations
+from core.context_compression import LociMemorySource, build_context
 
 
 # ── Global state (initialised in lifespan) ────────────────────────────────────
@@ -78,9 +79,14 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
     async def _tier_sync(tick_id: int) -> None:
         """Run SLP heat-driven tier migration plan on every heartbeat sync cycle."""
         if tier_manager is not None:
+            tier_manager.decay_heat()          # age heat (idempotent per elapsed time)
             migration = plan_migrations(tier_manager)
+            # Context nodes are text held in-process / SQLite, so a planned
+            # move is applied by updating the ledger. Tensor weights are not
+            # managed here (see docs/HYBRID_INFERENCE_DESIGN.md §2).
+            for placement, target in migration.promotions + migration.demotions:
+                tier_manager.commit_migration(placement.node_id, target)
             if migration.promotions or migration.demotions:
-                # Log summary; actual DMA transfer driven by gpu_offload.py
                 total = len(migration.promotions) + len(migration.demotions)
                 print(
                     f"[tier_sync] tick={tick_id}"
@@ -209,6 +215,25 @@ async def health():
     }
 
 
+# ── LOCI context (LDCE compression) ───────────────────────────────────────────
+
+def _with_loci_context(messages: list[dict]) -> list[dict]:
+    """Prepend the LDCE-compressed LOCI memory block as a system message.
+
+    Enabled when LOCI_DB_PATH points at a LOCI context2.db. Kernel items go in
+    full, hop items as symbols, offload items stay behind search.
+    """
+    src = LociMemorySource.from_env()
+    if src is None:
+        return messages
+    try:
+        ctx = build_context(src, manager=tier_manager)
+    except Exception as exc:  # memory must never break chat
+        print(f"[loci_context] skipped: {exc}")
+        return messages
+    return [{"role": "system", "content": ctx.text}] + messages
+
+
 # ── Chat (REST) ───────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
@@ -228,7 +253,8 @@ async def chat(req: ChatRequest):
                else Provider.LOCAL
 
     completion_req = CompletionRequest(
-        messages=[ChatMessage(role=m["role"], content=m["content"]) for m in req.messages],
+        messages=[ChatMessage(role=m["role"], content=m["content"])
+                  for m in _with_loci_context(req.messages)],
         model=req.model,
         max_tokens=req.max_tokens,
         temperature=req.temperature,
@@ -266,7 +292,7 @@ async def ws_chat(ws: WebSocket):
             req = CompletionRequest(
                 messages=[
                     ChatMessage(role=m["role"], content=m["content"])
-                    for m in data.get("messages", [])
+                    for m in _with_loci_context(data.get("messages", []))
                 ],
                 model=data.get("model"),
                 max_tokens=data.get("max_tokens", 1024),
@@ -370,6 +396,15 @@ MCP_TOOLS = [
         },
     },
     {
+        "name":        "arc_memory_expand",
+        "description": "Get the full text of a LOCI memory item shown as a symbol in context",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"id": {"type": "string"}},
+            "required": ["id"],
+        },
+    },
+    {
         "name":        "arc_status",
         "description": "Get Arc engine status (heartbeat, GPU, memory)",
         "inputSchema": {"type": "object", "properties": {}},
@@ -392,6 +427,12 @@ async def mcp_endpoint(request: Request):
         if tool == "arc_status":
             s = await status()
             return {"content": [{"type": "text", "text": json.dumps(s)}]}
+
+        if tool == "arc_memory_expand":
+            src = LociMemorySource.from_env()
+            item = src.expand(args.get("id", "")) if src else None
+            text = item.text if item else "not found (or LOCI_DB_PATH not set)"
+            return {"content": [{"type": "text", "text": text}]}
 
         if tool == "arc_memory_search":
             r = await memory_search(q=args.get("query", ""), limit=args.get("limit", 5))
