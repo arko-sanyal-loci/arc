@@ -435,6 +435,18 @@ def _bootstrap() -> None:
         tags    = ["browser"],
     )
 
+    # --- Calendar memory tools (from core/calendar_memory.py) ---
+    from core.calendar_memory import calendar  # local import to avoid cycles
+
+    for schema in calendar.tool_schemas():
+        dispatcher.register_schema(
+            schema  = schema,
+            handler = lambda args, _cal=calendar, _n=schema["function"]["name"]: (
+                _cal.handle_tool_call(_n, args)
+            ),
+            tags    = ["calendar", "memory"],
+        )
+
     logger.info(
         "tool_dispatcher bootstrapped: %d tools registered", len(dispatcher)
     )
