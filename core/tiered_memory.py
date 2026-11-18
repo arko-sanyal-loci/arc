@@ -82,6 +82,19 @@ def heat_to_tier(heat: float) -> Tier:
     else:
         return Tier.NVME
 
+
+def target_tier(current: Tier, heat: float) -> Tier:
+    """Where a node *should* live, given where it lives now (with hysteresis).
+
+    Promotion into VRAM uses the canonical tier boundary (0.80). A node that
+    already resides in VRAM stays there until its heat falls below the
+    admission threshold (0.70), so a node oscillating around 0.80 does not
+    thrash between VRAM and DDR5.
+    """
+    if current is Tier.VRAM and heat >= VRAM_ADMISSION_THRESHOLD:
+        return Tier.VRAM
+    return heat_to_tier(heat)
+
 TIER_ORDER = [Tier.NVME, Tier.DDR5, Tier.VRAM]  # low → high
 
 def tier_distance(src: Tier, dst: Tier) -> int:
@@ -140,6 +153,17 @@ class NodePlacement:
     # Heat decay tracking — used by decay_heat() on each heartbeat tick
     memory_class:   str  = "routine_observation"  # key into MEMORY_CLASSES
     last_access_ts: float = field(default_factory=time.time)  # UNIX seconds
+    # Heat as of last_access_ts. decay_heat() always ages *this* value by the
+    # total elapsed time, so calling it every tick does not compound decay.
+    heat_at_access: float = -1.0
+
+    def __post_init__(self) -> None:
+        if self.heat_at_access < 0:
+            self.heat_at_access = self.heat
+
+    @property
+    def target(self) -> Tier:
+        return target_tier(self.tier, self.heat)
 
 @dataclass
 class TierStats:
@@ -186,9 +210,14 @@ class TieredMemoryManager:
         # without deadlocking — both hold the lock before the nested acquire.
         self._lock       = threading.RLock()
 
-        # Update capacities from constructor args (allow override for testing)
-        TIER_CAPACITIES[Tier.DDR5].total_mb = ddr5_total_mb
-        TIER_CAPACITIES[Tier.VRAM].total_mb = vram_total_mb
+        # Per-instance capacities (copied, so tests and multiple managers
+        # never mutate the module-level defaults).
+        from dataclasses import replace as _dc_replace
+        self.capacities: Dict[Tier, TierCapacity] = {
+            t: _dc_replace(c) for t, c in TIER_CAPACITIES.items()
+        }
+        self.capacities[Tier.DDR5].total_mb = ddr5_total_mb
+        self.capacities[Tier.VRAM].total_mb = vram_total_mb
 
         # {node_id: NodePlacement}
         self._placements: Dict[str, NodePlacement] = {}
@@ -229,31 +258,23 @@ class TieredMemoryManager:
         return placement
 
     def update_heat(self, node_id: str, new_heat: float) -> Optional[NodePlacement]:
-        """Update a node's heat.
+        """Update a node's heat (a heat update implies a touch).
 
-        Returns the placement if tier changed, None if the node stayed in
-        the same tier (no migration needed).
-        Also resets last_access_ts to now (a heat update implies a touch).
+        Returns the placement if it now needs to migrate (its target tier
+        differs from where it resides), else None. The node's ``tier`` is
+        NOT changed here: it records where the data actually is, and only
+        ``commit_migration()`` moves it, after the data has been moved.
         """
         with self._lock:
             existing = self._placements.get(node_id)
             if existing is None:
                 return None
-            if existing.pinned:
-                existing.heat          = new_heat
-                existing.last_access_ts = time.time()
-                return None   # pinned nodes never migrate
-
-            old_tier = existing.tier
-            new_tier = heat_to_tier(new_heat)
             existing.heat           = new_heat
-            existing.tier           = new_tier
+            existing.heat_at_access = new_heat
             existing.last_access_ts = time.time()
-
-            if old_tier != new_tier:
-                self._publish_state()
-                return existing
-            return None
+            if existing.pinned:
+                return None   # pinned nodes never migrate
+            return existing if existing.target != existing.tier else None
 
     def touch(self, node_id: str) -> None:
         """Mark a node as recently accessed without changing its heat.
@@ -264,49 +285,55 @@ class TieredMemoryManager:
         with self._lock:
             existing = self._placements.get(node_id)
             if existing is not None:
+                existing.heat_at_access = existing.heat
                 existing.last_access_ts = time.time()
 
-    def decay_heat(self) -> List[Tuple[NodePlacement, Tier]]:
-        """Age every non-pinned node forward by elapsed time since last access.
+    def decay_heat(self, now: Optional[float] = None) -> List[Tuple[NodePlacement, Tier]]:
+        """Age every non-pinned node by the time since its last access.
 
         Uses the hyperbolic scalar decay law from core.heat:
-            h_new = h / (1 + elapsed / tau)
+            h = h_access / (1 + elapsed / tau)
 
-        where tau is set by the node's memory_class (e.g. routine_observation
-        τ=3d, valued_skill τ=20d, formative_scar τ=45d).
+        ``h_access`` is the heat at the last access, so the result depends
+        only on elapsed time, not on how often this is called (the previous
+        version re-applied decay to the already-decayed value every tick).
 
-        Called by the heartbeat engine every N ticks (~7 s via plan_migrations).
-
-        Returns
-        -------
-        List of (NodePlacement, new_tier) for nodes whose tier changed
-        after decay — these need actual migration.
+        Returns (placement, target_tier) for nodes that now need to migrate.
         """
-        now = time.time()
-        changed: List[Tuple[NodePlacement, Tier]] = []
+        now = time.time() if now is None else now
+        needs_move: List[Tuple[NodePlacement, Tier]] = []
 
         with self._lock:
             for p in self._placements.values():
                 if p.pinned:
                     continue
-                mc         = MEMORY_CLASSES.get(p.memory_class,
-                                                 MEMORY_CLASSES["routine_observation"])
-                elapsed    = max(0.0, now - p.last_access_ts)
-                new_heat   = heat_decay(p.heat, elapsed, mc.tau_days)
-                # Clamp to alpha floor so heat never reaches zero
-                new_heat   = max(mc.alpha + 1e-9, new_heat)
+                mc       = MEMORY_CLASSES.get(p.memory_class,
+                                              MEMORY_CLASSES["routine_observation"])
+                elapsed  = max(0.0, now - p.last_access_ts)
+                new_heat = heat_decay(p.heat_at_access, elapsed, mc.tau_days)
+                p.heat   = max(mc.alpha + 1e-9, new_heat)   # alpha floor (A3)
+                if p.target != p.tier:
+                    needs_move.append((p, p.target))
 
-                old_tier   = p.tier
-                new_tier   = heat_to_tier(new_heat)
-                p.heat     = new_heat
-
-                if old_tier != new_tier:
-                    p.tier = new_tier
-                    changed.append((p, new_tier))
-
-        if changed:
+        if needs_move:
             self._publish_state()
-        return changed
+        return needs_move
+
+    def commit_migration(self, node_id: str, new_tier: Tier) -> bool:
+        """Record that a node's data has been moved to ``new_tier``."""
+        with self._lock:
+            p = self._placements.get(node_id)
+            if p is None or p.pinned:
+                return False
+            p.tier = new_tier
+        self._publish_state()
+        return True
+
+    def set_pinned(self, node_id: str, pinned: bool) -> None:
+        with self._lock:
+            p = self._placements.get(node_id)
+            if p is not None:
+                p.pinned = pinned
 
     def evict(self, node_id: str) -> Optional[NodePlacement]:
         """Remove a node from the tier ledger (node expired / dropped)."""
@@ -322,7 +349,7 @@ class TieredMemoryManager:
         migrations = []
         with self._lock:
             for p in self._placements.values():
-                target = heat_to_tier(p.heat)
+                target = p.target
                 if target != p.tier and not p.pinned:
                     migrations.append((p, target))
         # promotions (dist > 0) before demotions (dist < 0)
@@ -335,7 +362,7 @@ class TieredMemoryManager:
             t: TierStats(
                 tier       = t,
                 used_mb    = 0.0,
-                total_mb   = TIER_CAPACITIES[t].total_mb,
+                total_mb   = self.capacities[t].total_mb,
                 node_count = 0,
                 hot_ratio  = 0.0,
             )
@@ -419,7 +446,7 @@ class TieredMemoryManager:
         st = self.stats()
         for tier in TIER_ORDER:
             s   = st[tier]
-            cap = TIER_CAPACITIES[tier]
+            cap = self.capacities[tier]
             bar_w  = 20
             filled = int(s.utilisation_pct / 100 * bar_w)
             bar    = "█" * filled + "░" * (bar_w - filled)
@@ -461,7 +488,7 @@ def plan_migrations(
             continue
 
         t_stat = stats[target_tier]
-        cap    = TIER_CAPACITIES[target_tier]
+        cap    = manager.capacities[target_tier]
 
         # Leave headroom in target tier
         headroom_mb = cap.total_mb * 0.05

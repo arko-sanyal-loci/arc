@@ -78,9 +78,14 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
     async def _tier_sync(tick_id: int) -> None:
         """Run SLP heat-driven tier migration plan on every heartbeat sync cycle."""
         if tier_manager is not None:
+            tier_manager.decay_heat()          # age heat (idempotent per elapsed time)
             migration = plan_migrations(tier_manager)
+            # Context nodes are text held in-process / SQLite, so a planned
+            # move is applied by updating the ledger. Tensor weights are not
+            # managed here (see docs/HYBRID_INFERENCE_DESIGN.md §2).
+            for placement, target in migration.promotions + migration.demotions:
+                tier_manager.commit_migration(placement.node_id, target)
             if migration.promotions or migration.demotions:
-                # Log summary; actual DMA transfer driven by gpu_offload.py
                 total = len(migration.promotions) + len(migration.demotions)
                 print(
                     f"[tier_sync] tick={tick_id}"
