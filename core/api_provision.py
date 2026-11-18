@@ -31,6 +31,8 @@ from typing import AsyncGenerator, Optional
 
 import aiohttp
 
+from core.cache_layer import PromptCacheLayer, CacheTTL, LociItem, cache_layer  # noqa: F401
+
 
 # ── Provider definitions ───────────────────────────────────────────────────────
 
@@ -179,13 +181,17 @@ class ChatMessage:
 
 @dataclass
 class CompletionRequest:
-    messages:    list[ChatMessage]
-    model:       Optional[str]    = None
-    max_tokens:  int              = 1024
-    temperature: float            = 0.7
-    stream:      bool             = False
-    provider:    Provider         = Provider.LOCAL
-    metadata:    dict             = field(default_factory=dict)
+    messages:         list[ChatMessage]
+    model:            Optional[str]        = None
+    max_tokens:       int                  = 1024
+    temperature:      float                = 0.7
+    stream:           bool                 = False
+    provider:         Provider             = Provider.LOCAL
+    metadata:         dict                 = field(default_factory=dict)
+    # Prompt caching support (Anthropic / nexos Claude routes only)
+    tools:            list                 = field(default_factory=list)
+    retrieved_items:  list                 = field(default_factory=list)
+    enable_caching:   bool                 = True
 
 
 @dataclass
@@ -272,13 +278,33 @@ class APIProvisioner:
         if provider == Provider.NEXOS and key:
             headers["X-Api-Key"] = key
 
-        payload = {
+        # Build raw messages list
+        raw_msgs: list[dict] = [{"role": m.role, "content": m.content} for m in req.messages]
+        raw_tools = req.tools or []
+
+        # Apply prompt caching breakpoints for Claude-family models
+        cache = PromptCacheLayer(
+            enabled     = req.enable_caching and provider != Provider.XAI,
+            default_ttl = CacheTTL.EPHEMERAL,
+        )
+        cached_msgs, cached_tools = cache.annotate(
+            messages        = raw_msgs,
+            tools           = raw_tools,
+            retrieved_items = req.retrieved_items,
+            model           = model,
+        )
+        # Merge extended-TTL beta headers if needed
+        headers.update(cache.all_extra_headers())
+
+        payload: dict = {
             "model":       model,
-            "messages":    [{"role": m.role, "content": m.content} for m in req.messages],
+            "messages":    cached_msgs,
             "max_tokens":  req.max_tokens,
             "temperature": req.temperature,
             "stream":      False,
         }
+        if cached_tools:
+            payload["tools"] = cached_tools
 
         if self._session is None:
             raise RuntimeError("APIProvisioner.start() must be called before complete()")
@@ -337,13 +363,30 @@ class APIProvisioner:
         if provider == Provider.NEXOS and key:
             headers["X-Api-Key"] = key
 
-        payload = {
+        raw_msgs2: list[dict] = [{"role": m.role, "content": m.content} for m in req.messages]
+        raw_tools2 = req.tools or []
+
+        cache2 = PromptCacheLayer(
+            enabled     = req.enable_caching and provider != Provider.XAI,
+            default_ttl = CacheTTL.EPHEMERAL,
+        )
+        cached_msgs2, cached_tools2 = cache2.annotate(
+            messages        = raw_msgs2,
+            tools           = raw_tools2,
+            retrieved_items = req.retrieved_items,
+            model           = model,
+        )
+        headers.update(cache2.all_extra_headers())
+
+        payload: dict = {
             "model":       model,
-            "messages":    [{"role": m.role, "content": m.content} for m in req.messages],
+            "messages":    cached_msgs2,
             "max_tokens":  req.max_tokens,
             "temperature": req.temperature,
             "stream":      True,
         }
+        if cached_tools2:
+            payload["tools"] = cached_tools2
 
         if self._session is None:
             raise RuntimeError("APIProvisioner.start() must be called before stream()")
