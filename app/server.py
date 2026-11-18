@@ -39,7 +39,8 @@ from core.heartbeat      import HeartbeatEngine, LANE_RTX, LANE_ARC, LANE_CPU
 from core.engine_sync    import EngineSync
 from core.gpu_offload    import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
 from core.api_provision  import APIProvisioner, CompletionRequest, ChatMessage, Provider
-from core.tiered_memory  import TieredMemoryManager, plan_migrations
+from core.tiered_memory  import TieredMemoryManager
+from core.tier_stream    import TierStream
 from core.context_compression import LociMemorySource, build_context
 
 
@@ -49,6 +50,7 @@ heartbeat:    HeartbeatEngine | None      = None
 engine_sync:  EngineSync | None           = None
 gpu_manager:  GPUOffloadManager | None    = None
 tier_manager: TieredMemoryManager | None  = None
+tier_stream:  TierStream | None           = None
 provisioner:  APIProvisioner | None       = None
 _hb_task:     asyncio.Task | None         = None
 
@@ -57,7 +59,7 @@ _hb_task:     asyncio.Task | None         = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ANN001
-    global heartbeat, engine_sync, gpu_manager, tier_manager, provisioner, _hb_task
+    global heartbeat, engine_sync, gpu_manager, tier_manager, tier_stream, provisioner, _hb_task
 
     # Heartbeat
     heartbeat = HeartbeatEngine()
@@ -73,30 +75,26 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
     # GPU offload manager
     gpu_manager = GPUOffloadManager()
 
-    # Tiered memory manager — wired to run a migration plan on every sync tick
+    # Tiered memory: the ledger says where nodes belong; the stream moves
+    # them there a bandwidth-bounded slice per 140 ms tick (core/tier_stream.py).
     tier_manager = TieredMemoryManager()
+    tier_stream  = TierStream(manager=tier_manager)
+    _last_tick   = {"t": time.monotonic()}
 
-    async def _tier_sync(tick_id: int) -> None:
-        """Run SLP heat-driven tier migration plan on every heartbeat sync cycle."""
-        if tier_manager is not None:
-            tier_manager.decay_heat()          # age heat (idempotent per elapsed time)
-            migration = plan_migrations(tier_manager)
-            # Context nodes are text held in-process / SQLite, so a planned
-            # move is applied by updating the ledger. Tensor weights are not
-            # managed here (see docs/HYBRID_INFERENCE_DESIGN.md §2).
-            for placement, target in migration.promotions + migration.demotions:
-                tier_manager.commit_migration(placement.node_id, target)
-            if migration.promotions or migration.demotions:
-                total = len(migration.promotions) + len(migration.demotions)
-                print(
-                    f"[tier_sync] tick={tick_id}"
-                    f"  promote={len(migration.promotions)}"
-                    f"  demote={len(migration.demotions)}"
-                    f"  skipped={len(migration.skipped)}"
-                    f"  total={total}"
-                )
+    async def _tier_tick(tick_id: int, now: float) -> None:
+        if tier_manager is None or tier_stream is None:
+            return
+        mono = time.monotonic()
+        dt, _last_tick["t"] = mono - _last_tick["t"], mono
+        tier_manager.decay_heat()          # idempotent per elapsed time
+        events = tier_stream.step(dt)
+        done = [e for e in events if e.completed]
+        if done:
+            print(f"[tier_stream] tick={tick_id} completed="
+                  + ", ".join(f"{e.item_id}:{e.src.value}->{e.dst.value}({e.reason})"
+                              for e in done[:8]))
 
-    heartbeat.on_sync(_tier_sync)
+    heartbeat.on_tick(_tier_tick)
 
     # API provisioner
     provisioner = APIProvisioner.from_config()
@@ -197,6 +195,7 @@ async def status():
             },
         },
         "memory_tiers": tier_snapshot.get("tiers", {}),
+        "tier_stream":  tier_stream.snapshot() if tier_stream else {},
     }
 
 

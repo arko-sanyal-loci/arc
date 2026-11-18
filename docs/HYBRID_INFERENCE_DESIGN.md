@@ -17,5 +17,7 @@ LOCI secure coordination bus.
 | Prompt context via LOCI LDCE (kernel / hop symbols / offload) | `core/context_compression.py` | Done; parity-tested against `loci_engine.session_continuity` |
 | Context on/offload ledger (VRAM / DDR5 / NVMe) | `core/tiered_memory.py` | Fixed: migrations are now planned and committed, and decay no longer compounds |
 | GPU-box driver/runtime repair (Blackwell CUDA 12.8+, B70, WSL2-aware) | `scripts/arc_repair_and_update.sh` | Done |
+| Streaming tier movement (pipelined NVMe → DDR5 → VRAM, mild/cold demotion, buoyancy prefetch, pressure) | `core/tier_stream.py` | Done; runs every heartbeat tick. See `docs/ARCHITECTURE.md` |
+| Draft-scaffold → target handoff (overlap for speculation, or release draft to RAM) | `core/model_stager.py` | Planner + page-cache prewarm done; not yet driving a real `llama-server` |
 | Honest B70 telemetry (xpu-smi → llama-server metrics → fdinfo → `null`) | `core/gpu_offload.py` | **To do**: still returns a hardcoded 24 GB free |
 | Router v2 + budget governor + oversight adapter | `core/api_provision.py` | **To do**, after the bus events land |
