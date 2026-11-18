@@ -11,11 +11,17 @@ xAI: Grok API (direct)
   - OpenAI-compatible interface
   - Models: grok-2, grok-2-mini, grok-3 (when available)
 
-Role in Arc:
-  - Primary compute: local Arc B70 / RTX 5060 Ti (sovereignty path)
-  - Compute offset:  nexos.ai (burst / heavy tasks)
-  - Failsafe:        xAI Grok (fallback when nexos unreachable)
+Role in Arc — dual-track local inference:
+  - LOCAL        RTX 5060 Ti (16GB GDDR7) — Ollama CUDA — localhost:11434/v1
+                 Used for: nomic-embed, ≤8B models, single-user fast path
+  - LOCAL_INTEL  Arc Pro B70 (32GB GDDR6) — Intel LLM-Scaler vLLM — localhost:8000/v1
+                 Used for: 9B–70B models, mobile/web concurrent traffic
+  - LOCAL_SGLANG Arc Pro B70 — SGLang XPU (experimental) — localhost:7000/v1
+  - NEXOS        nexos.ai (burst / heavy tasks)
+  - XAI          xAI Grok (failsafe)
   - API key storage: config/arc_config.yaml (encrypted field, loaded at startup)
+
+Routing: embed/small → LOCAL → LOCAL_INTEL → NEXOS → XAI
 """
 
 from __future__ import annotations
@@ -37,31 +43,59 @@ from core.cache_layer import PromptCacheLayer, CacheTTL, LociItem, cache_layer  
 # ── Provider definitions ───────────────────────────────────────────────────────
 
 class Provider(Enum):
-    LOCAL   = auto()   # Arc B70 / RTX (llama.cpp / ollama)
-    NEXOS   = auto()   # nexos.ai gateway (burst / offset compute)
-    XAI     = auto()   # xAI Grok (failsafe)
+    LOCAL        = auto()   # RTX 5060 Ti — Ollama CUDA — localhost:11434
+    LOCAL_INTEL  = auto()   # Arc Pro B70 — Intel LLM-Scaler vLLM — localhost:8000
+    LOCAL_SGLANG = auto()   # Arc Pro B70 — SGLang XPU (experimental) — localhost:7000
+    NEXOS        = auto()   # nexos.ai gateway (burst / offset compute)
+    XAI          = auto()   # xAI Grok (failsafe)
 
 
 PROVIDER_ENDPOINTS = {
-    Provider.LOCAL:  os.environ.get("ARC_LOCAL_ENDPOINT", "http://localhost:11434/v1"),
+    Provider.LOCAL:        os.environ.get(
+        "LOCI_LOCAL_BASE_URL",
+        os.environ.get("ARC_LOCAL_ENDPOINT", "http://localhost:11434/v1"),
+    ),
+    Provider.LOCAL_INTEL:  os.environ.get(
+        "LOCI_LOCAL_INTEL_BASE_URL", "http://localhost:8000/v1"
+    ),
+    Provider.LOCAL_SGLANG: os.environ.get(
+        "LOCI_LOCAL_SGLANG_BASE_URL", "http://localhost:7000/v1"
+    ),
     Provider.NEXOS:  "https://api.nexos.ai/v1",
     Provider.XAI:    "https://api.x.ai/v1",
 }
 
 PROVIDER_MODELS = {
-    Provider.LOCAL:  "arc-local",         # resolved by ollama / llama.cpp
-    Provider.NEXOS:  "meta-llama/llama-3.3-70b-instruct",  # default; overridable
-    Provider.XAI:    "grok-2",
+    Provider.LOCAL:        os.environ.get("LOCI_LOCAL_MODEL", "arc-local"),
+    Provider.LOCAL_INTEL:  os.environ.get("LOCI_LOCAL_INTEL_MODEL", "arc-b70"),
+    Provider.LOCAL_SGLANG: os.environ.get("LOCI_LOCAL_SGLANG_MODEL", "arc-b70-sglang"),
+    Provider.NEXOS:        "meta-llama/llama-3.3-70b-instruct",  # default; overridable
+    Provider.XAI:          "grok-2",
 }
+
+# Routing table: model size → preferred provider
+# Small (embed, ≤8B) → LOCAL; large (9B–70B) → LOCAL_INTEL; fallback chain: NEXOS → XAI
+def provider_for_model(model_name: str) -> Provider:
+    """
+    Heuristic: pick LOCAL_INTEL for large models, LOCAL for small.
+    arc-runtime callers can override by passing provider= explicitly.
+    """
+    lower = model_name.lower()
+    large_tokens = ("70b", "72b", "65b", "34b", "32b", "30b", "13b", "14b")
+    if any(t in lower for t in large_tokens):
+        return Provider.LOCAL_INTEL
+    return Provider.LOCAL
 
 HEALTH_PATH = "/dev/shm/arc_api_health.json"
 
 
 @dataclass
 class APIKeys:
-    nexos:    Optional[str] = None
-    xai:      Optional[str] = None
-    local:    Optional[str] = None   # optional; most local servers don't need a key
+    nexos:         Optional[str] = None
+    xai:           Optional[str] = None
+    local:         Optional[str] = None   # optional; most local servers don't need a key
+    local_intel:   Optional[str] = None   # Intel vLLM — usually "local" or empty
+    local_sglang:  Optional[str] = None   # SGLang XPU — usually "local" or empty
 
     @classmethod
     def from_env(cls) -> "APIKeys":
@@ -70,7 +104,9 @@ class APIKeys:
         return cls(
             nexos=(os.environ.get("ARC_NEXOS_KEY") or os.environ.get("NEXOS_API_KEY")),
             xai=(os.environ.get("ARC_XAI_KEY") or os.environ.get("XAI_API_KEY")),
-            local=os.environ.get("ARC_LOCAL_API_KEY"),
+            local=os.environ.get("ARC_LOCAL_API_KEY", "ollama"),
+            local_intel=os.environ.get("LOCI_LOCAL_INTEL_API_KEY", "local"),
+            local_sglang=os.environ.get("LOCI_LOCAL_SGLANG_API_KEY", "local"),
         )
 
     @classmethod
@@ -83,16 +119,20 @@ class APIKeys:
             return cls(
                 nexos=keys.get("nexos"),
                 xai=keys.get("xai"),
-                local=keys.get("local"),
+                local=keys.get("local", "ollama"),
+                local_intel=keys.get("local_intel", "local"),
+                local_sglang=keys.get("local_sglang", "local"),
             )
         except Exception:
             return cls.from_env()
 
     def for_provider(self, p: Provider) -> Optional[str]:
         return {
-            Provider.NEXOS: self.nexos,
-            Provider.XAI:   self.xai,
-            Provider.LOCAL: self.local,
+            Provider.NEXOS:        self.nexos,
+            Provider.XAI:          self.xai,
+            Provider.LOCAL:        self.local,
+            Provider.LOCAL_INTEL:  self.local_intel,
+            Provider.LOCAL_SGLANG: self.local_sglang,
         }.get(p)
 
 
@@ -150,9 +190,11 @@ async def _ping_provider(
 async def health_check_all(keys: APIKeys) -> dict[Provider, ProviderHealth]:
     async with aiohttp.ClientSession() as session:
         results = await asyncio.gather(
-            _ping_provider(session, Provider.LOCAL, keys),
-            _ping_provider(session, Provider.NEXOS, keys),
-            _ping_provider(session, Provider.XAI,   keys),
+            _ping_provider(session, Provider.LOCAL,        keys),
+            _ping_provider(session, Provider.LOCAL_INTEL,  keys),
+            _ping_provider(session, Provider.LOCAL_SGLANG, keys),
+            _ping_provider(session, Provider.NEXOS,        keys),
+            _ping_provider(session, Provider.XAI,          keys),
         )
     health = {r.provider: r for r in results}
     # Publish to shm
@@ -251,13 +293,22 @@ class APIProvisioner:
     def _pick_provider(self, requested: Provider) -> Provider:
         """
         Follow the priority chain, falling back on health.
-        sovereignty path → LOCAL always; never falls back to API providers.
-        """
-        chain = [requested]
-        if requested != Provider.LOCAL:
-            chain = [Provider.LOCAL, Provider.NEXOS, Provider.XAI]
 
-        for p in chain:
+        Chains:
+          LOCAL        → LOCAL only (sovereignty; no API fallback for embed/small)
+          LOCAL_INTEL  → LOCAL_INTEL → NEXOS → XAI
+          LOCAL_SGLANG → LOCAL_SGLANG → LOCAL_INTEL → NEXOS → XAI
+          NEXOS        → NEXOS → XAI
+          XAI          → XAI only
+        """
+        chains: dict[Provider, list[Provider]] = {
+            Provider.LOCAL:        [Provider.LOCAL],
+            Provider.LOCAL_INTEL:  [Provider.LOCAL_INTEL, Provider.NEXOS, Provider.XAI],
+            Provider.LOCAL_SGLANG: [Provider.LOCAL_SGLANG, Provider.LOCAL_INTEL, Provider.NEXOS, Provider.XAI],
+            Provider.NEXOS:        [Provider.NEXOS, Provider.XAI],
+            Provider.XAI:          [Provider.XAI],
+        }
+        for p in chains.get(requested, [requested]):
             h = self._health.get(p)
             if h and h.reachable:
                 return p
