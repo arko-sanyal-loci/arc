@@ -19,12 +19,15 @@ MCP compatibility:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import sys
 import time
+import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,44 +35,28 @@ from pydantic import BaseModel
 
 # Arc core
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from core.heartbeat   import HeartbeatEngine, LANE_RTX, LANE_ARC, LANE_CPU
-from core.engine_sync import EngineSync
-from core.gpu_offload import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
-from core.api_provision import APIProvisioner, CompletionRequest, ChatMessage, Provider
-
-
-# ── App setup ─────────────────────────────────────────────────────────────────
-
-app = FastAPI(
-    title="Arc",
-    description="Arc — Loci-powered local AI with dynamic GPU offloading",
-    version="0.1.0",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-STATIC_DIR = Path(__file__).parent / "static"
-if STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+from core.heartbeat      import HeartbeatEngine, LANE_RTX, LANE_ARC, LANE_CPU
+from core.engine_sync    import EngineSync
+from core.gpu_offload    import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
+from core.api_provision  import APIProvisioner, CompletionRequest, ChatMessage, Provider
+from core.tiered_memory  import TieredMemoryManager, plan_migrations
 
 
 # ── Global state (initialised in lifespan) ────────────────────────────────────
 
-heartbeat:    HeartbeatEngine | None   = None
-engine_sync:  EngineSync | None        = None
-gpu_manager:  GPUOffloadManager | None = None
-provisioner:  APIProvisioner | None    = None
-_hb_task:     asyncio.Task | None      = None
+heartbeat:    HeartbeatEngine | None      = None
+engine_sync:  EngineSync | None           = None
+gpu_manager:  GPUOffloadManager | None    = None
+tier_manager: TieredMemoryManager | None  = None
+provisioner:  APIProvisioner | None       = None
+_hb_task:     asyncio.Task | None         = None
 
 
-@app.on_event("startup")
-async def startup() -> None:
-    global heartbeat, engine_sync, gpu_manager, provisioner, _hb_task
+# ── Lifespan (replaces deprecated on_event) ───────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # noqa: ANN001
+    global heartbeat, engine_sync, gpu_manager, tier_manager, provisioner, _hb_task
 
     # Heartbeat
     heartbeat = HeartbeatEngine()
@@ -85,6 +72,26 @@ async def startup() -> None:
     # GPU offload manager
     gpu_manager = GPUOffloadManager()
 
+    # Tiered memory manager — wired to run a migration plan on every sync tick
+    tier_manager = TieredMemoryManager()
+
+    async def _tier_sync(tick_id: int) -> None:
+        """Run SLP heat-driven tier migration plan on every heartbeat sync cycle."""
+        if tier_manager is not None:
+            migration = plan_migrations(tier_manager)
+            if migration.promotions or migration.demotions:
+                # Log summary; actual DMA transfer driven by gpu_offload.py
+                total = len(migration.promotions) + len(migration.demotions)
+                print(
+                    f"[tier_sync] tick={tick_id}"
+                    f"  promote={len(migration.promotions)}"
+                    f"  demote={len(migration.demotions)}"
+                    f"  skipped={len(migration.skipped)}"
+                    f"  total={total}"
+                )
+
+    heartbeat.on_sync(_tier_sync)
+
     # API provisioner
     provisioner = APIProvisioner.from_config()
     await provisioner.start()
@@ -92,17 +99,42 @@ async def startup() -> None:
     # Start heartbeat in background
     _hb_task = asyncio.create_task(heartbeat.run())
 
+    yield  # ── server is running ──────────────────────────────────────────────
 
-@app.on_event("shutdown")
-async def shutdown() -> None:
+    # Shutdown
     if heartbeat:
         heartbeat.stop()
     if _hb_task:
         _hb_task.cancel()
+        try:
+            await asyncio.wait_for(_hb_task, timeout=2.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
     if provisioner:
         await provisioner.stop()
     if engine_sync:
         engine_sync.close()
+
+
+# ── App setup ─────────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title="Arc",
+    description="Arc — Loci-powered local AI with dynamic GPU offloading",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -125,6 +157,13 @@ async def status():
     hb_status = {}
     try:
         hb_status = json.loads(Path("/dev/shm/arc_status.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    # Tier stats (read shm snapshot — zero-copy)
+    tier_snapshot: dict = {}
+    try:
+        tier_snapshot = json.loads(Path("/dev/shm/arc_tier_state.json").read_text())
     except (OSError, json.JSONDecodeError):
         pass
 
@@ -151,6 +190,7 @@ async def status():
                 "util_pct": round(arc.utilisation * 100, 1),
             },
         },
+        "memory_tiers": tier_snapshot.get("tiers", {}),
     }
 
 
@@ -286,7 +326,6 @@ async def memory_ingest(req: IngestRequest):
     if not engine_sync or not engine_sync._conn:
         return JSONResponse({"error": "db not ready"}, status_code=503)
     try:
-        import hashlib, uuid
         node_id = str(uuid.uuid4())
         now     = time.time()
         h       = hashlib.sha256(
@@ -339,15 +378,16 @@ MCP_TOOLS = [
 
 
 @app.post("/mcp")
-async def mcp_endpoint(request: dict):
-    method = request.get("method", "")
+async def mcp_endpoint(request: Request):
+    body   = await request.json()
+    method = body.get("method", "")
 
     if method == "tools/list":
         return {"tools": MCP_TOOLS}
 
     if method == "tools/call":
-        tool  = request.get("params", {}).get("name", "")
-        args  = request.get("params", {}).get("arguments", {})
+        tool  = body.get("params", {}).get("name", "")
+        args  = body.get("params", {}).get("arguments", {})
 
         if tool == "arc_status":
             s = await status()
@@ -365,7 +405,7 @@ async def mcp_endpoint(request: dict):
             r = await chat(chat_req)
             return {"content": [{"type": "text", "text": json.dumps(r)}]}
 
-    return JSONResponse({"error": f"unknown method: {method}"}, status_code=400)
+    return JSONResponse({"error": f"unknown MCP method: {method}"}, status_code=400)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

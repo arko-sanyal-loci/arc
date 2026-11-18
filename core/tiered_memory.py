@@ -157,7 +157,9 @@ class TieredMemoryManager:
     ):
         self.nvme_base   = Path(nvme_base_path)
         self.shm_path    = shm_state_path
-        self._lock       = threading.Lock()
+        # RLock (reentrant) so place()/update_heat() can call _publish_state()
+        # without deadlocking — both hold the lock before the nested acquire.
+        self._lock       = threading.RLock()
 
         # Update capacities from constructor args (allow override for testing)
         TIER_CAPACITIES[Tier.DDR5].total_mb = ddr5_total_mb

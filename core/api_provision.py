@@ -63,9 +63,11 @@ class APIKeys:
 
     @classmethod
     def from_env(cls) -> "APIKeys":
+        # Primary names match arc_config.yaml / .env.example (ARC_*_KEY).
+        # Legacy aliases (without ARC_ prefix) are accepted as fallback.
         return cls(
-            nexos=os.environ.get("NEXOS_API_KEY"),
-            xai=os.environ.get("XAI_API_KEY"),
+            nexos=(os.environ.get("ARC_NEXOS_KEY") or os.environ.get("NEXOS_API_KEY")),
+            xai=(os.environ.get("ARC_XAI_KEY") or os.environ.get("XAI_API_KEY")),
             local=os.environ.get("ARC_LOCAL_API_KEY"),
         )
 
@@ -278,9 +280,10 @@ class APIProvisioner:
             "stream":      False,
         }
 
+        if self._session is None:
+            raise RuntimeError("APIProvisioner.start() must be called before complete()")
         t0 = time.monotonic()
         try:
-            assert self._session
             async with self._session.post(
                 f"{endpoint}/chat/completions",
                 headers=headers,
@@ -342,7 +345,8 @@ class APIProvisioner:
             "stream":      True,
         }
 
-        assert self._session
+        if self._session is None:
+            raise RuntimeError("APIProvisioner.start() must be called before stream()")
         async with self._session.post(
             f"{endpoint}/chat/completions",
             headers=headers,

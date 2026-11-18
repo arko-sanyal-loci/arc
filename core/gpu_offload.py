@@ -37,7 +37,11 @@ RTX_LOW_WATER_MB  = 2_048   # pull from Arc when RTX free < 2 GB
 RTX_HIGH_WATER_MB = 4_096   # spill to Arc when RTX free > 4 GB (can reclaim)
 ARC_LOW_WATER_MB  = 4_096   # never spill to Arc if Arc free < 4 GB
 
-SHM_OFFLOAD_PATH  = "/dev/shm/arc_offload_ring"
+# NOTE: arc_offload_ring is a raw 4 MiB file pre-allocated by start.sh for the
+#       future zero-copy DMA ring.  SHMStager uses a *separate* directory for
+#       its JSON/blob manifest files so the two never conflict.
+SHM_OFFLOAD_RING  = "/dev/shm/arc_offload_ring"   # raw ring file (DMA, future)
+SHM_OFFLOAD_PATH  = "/dev/shm/arc_offload_stage"  # SHMStager blob directory
 OFFLOAD_STATE_PATH = "/dev/shm/arc_offload_state.json"
 
 

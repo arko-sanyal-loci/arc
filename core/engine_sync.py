@@ -186,8 +186,15 @@ class EngineSync:
                     state.drift_detected   = result.drift_count > 0
                     state.last_drift_kinds = [d.name for d in result.drifts_by_kind]
 
-            # 4 — Record sync to DB
-            if self._conn:
+        except Exception as exc:
+            state.errors.append(str(exc))
+
+        # 4 — Duration (calculated before the DB insert so the row holds the real value)
+        state.sync_duration_ms = (time.monotonic() - t0) * 1000
+
+        # 5 — Record sync to DB
+        if self._conn:
+            try:
                 self._conn.execute(
                     """INSERT INTO engine_syncs
                        (tick_id, timestamp, lane_mask, node_count, ledger_rows, drift, duration_ms)
@@ -199,16 +206,12 @@ class EngineSync:
                         state.loci_node_count,
                         state.loci_ledger_rows,
                         int(state.drift_detected),
-                        0.0,  # filled in after
+                        state.sync_duration_ms,
                     ),
                 )
                 self._conn.commit()
-
-        except Exception as exc:
-            state.errors.append(str(exc))
-
-        # 5 — Duration
-        state.sync_duration_ms = (time.monotonic() - t0) * 1000
+            except Exception as exc:
+                state.errors.append(f"db_insert: {exc}")
 
         # 6 — Publish to shm
         self._publish_state(state)

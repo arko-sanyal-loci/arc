@@ -93,7 +93,9 @@ class SHMRing:
             return
         ts_us = int(time.time() * 1_000_000)
         record = struct.pack(TICK_RECORD_FMT, ts_us, tick_id & 0xFFFF, lane_mask & 0xFFFF)
-        pos = (self._write_pos * TICK_RECORD_SIZE) % (self._size - TICK_RECORD_SIZE)
+        # capacity = number of whole records that fit; use modulo to stay aligned
+        capacity = self._size // TICK_RECORD_SIZE
+        pos = (self._write_pos % capacity) * TICK_RECORD_SIZE
         self._mm[pos : pos + TICK_RECORD_SIZE] = record
         self._write_pos += 1
 
