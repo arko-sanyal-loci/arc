@@ -11,10 +11,12 @@
 | `core/heartbeat.py` | 140ms tick engine, /dev/shm ring, worker health tracking | `HeartbeatEngine`, `SHMRing`, `WorkerState`, `WorkerStatus` |
 | `core/tiered_memory.py` | 3-tier VRAM/DDR5/NVMe placement ledger | `TieredMemoryManager`, `plan_migrations()`, `heat_to_tier()`, `target_tier()`, `commit_migration()`, `MigrationPlan`, `NodePlacement`, `TierCapacity`, `TierStats` |
 | `core/context_compression.py` | LOCI LDCE context compression: kernel / hop (symbol) / offload, LOCI DB source, VRAM pin bridge | `compute_tiers()`, `render()`, `sync_placements()`, `LociMemorySource`, `build_context()`, `LDCE_SOURCE` |
+| `core/tier_stream.py` | Continuous tier streaming: hop-by-hop pipelined moves, mild/cold demotion, buoyancy prefetch, pressure eviction, dirty write-back | `TierStream`, `StreamItem`, `TransferEvent`, `Mover`, `pipelined_load_seconds()` |
+| `core/model_stager.py` | Draft scaffolds while target streams in; overlap (speculative) or handoff (draft → RAM); GGUF page-cache prewarm | `ModelStager`, `ModelSpec`, `Phase`, `PageCacheMover` |
 | `docs/HYBRID_INFERENCE_DESIGN.md` | Hybrid local-first + remote-oversight engine design and plan | — |
 | `scripts/arc_repair_and_update.sh` | Diagnose-first dpkg repair; drivers, CUDA, B70 runtimes, firmware (WSL-aware) | — |
 | `scripts/setup_terminal.sh` | Friendly terminal: Starship, fzf, zoxide, eza, `arc` status card | — |
-| `tests/test_tiered_memory.py`, `tests/test_context_compression.py` | 19 tests incl. LDCE parity with LOCI | — |
+| `tests/test_tiered_memory.py`, `tests/test_context_compression.py`, `tests/test_tier_stream.py` | 38 tests incl. LDCE parity with LOCI and streaming/staging | — |
 | `core/engine_sync.py` | Loci ↔ SQLite ↔ /dev/shm sync on every Nth heartbeat tick | `EngineSync`, `EngineState`, `_ensure_tables()`, `_count_rows()` |
 | `core/gpu_offload.py` | VRAM query + RTX↔B70 offload policy + SHM staging | `GPUOffloadManager`, `SHMStager`, `decide_offload()`, `query_vram()`, `VRAMStats`, `OffloadDecision`, `OffloadDir` |
 | `core/api_provision.py` | Multi-provider gateway (LOCAL→NEXOS→XAI) | `APIProvisioner`, `APIKeys`, `Provider`, `ProviderHealth`, `ChatMessage`, `CompletionRequest`, `CompletionResponse`, `health_check_all()` |
