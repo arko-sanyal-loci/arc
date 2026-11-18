@@ -1,0 +1,194 @@
+"""
+tests/bench_bus_fidelity.py — Empirical SLP fidelity vs payload size benchmark
+
+Measures actual byte cost per heat level to find optimal /dev/shm ring size.
+
+Fidelity model:
+  cold (H=α):    SLP register stub only         → ~20 bytes
+  warm (H≈0.4):  register + compact summary      → ~200 bytes
+  hot (H≈0.7):   register + full context snippet  → ~2 KB
+  sovereign(H→1): register + full reconstructed   → ~16 KB max
+
+7.9 GB/s × optimal_ring_latency_ms / 1000 = ring capacity needed
+"""
+
+import json
+import struct
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "loci"))
+from slp_encoding import heat_to_u16, u16_to_heat, ALPHA
+
+# ── Synthetic payload generator ────────────────────────────────────────────────
+
+FIDELITY_LEVELS = {
+    # (heat_value, label, description_of_payload)
+    "α_floor":   (ALPHA,  "stub only",           20),       # just the SLP register
+    "low":       (0.15,   "register + id",        64),       # 1 cache line
+    "warm":      (0.35,   "compact summary",      256),      # ~4 cache lines
+    "active":    (0.55,   "context snippet",      2_048),    # 2 KB
+    "hot":       (0.70,   "full context",         8_192),    # 8 KB
+    "burning":   (0.85,   "rich context+meta",    16_384),   # 16 KB
+    "sovereign": (0.9999, "full reconstruct",     32_768),   # 32 KB max
+}
+
+# Realistic token counts at each fidelity level
+TOKEN_ESTIMATES = {
+    "α_floor":   5,
+    "low":       15,
+    "warm":      60,
+    "active":    512,
+    "hot":       2_048,
+    "burning":   4_096,
+    "sovereign": 8_192,
+}
+
+INTER_BUS_GBPS      = 7.9
+INTER_BUS_BYTES_PER_S = INTER_BUS_GBPS * 1_024**3
+HEARTBEAT_TICK_S    = 0.140   # 140ms
+
+
+def synthetic_payload(byte_size: int) -> bytes:
+    """Generate a synthetic payload of given size."""
+    return bytes([i % 256 for i in range(byte_size)])
+
+
+def encode_node_packet(heat: float, payload_bytes: int) -> bytes:
+    """
+    Minimal node packet structure:
+      [4 bytes: magic]
+      [2 bytes: heat_u16]
+      [2 bytes: stream_flags]
+      [4 bytes: payload_len]
+      [payload_bytes: fidelity payload]
+    """
+    magic       = b"ARC1"
+    heat_u16    = heat_to_u16(heat)
+    flags       = 0x0001  # I-stream
+    header      = struct.pack("<4sHHI", magic, heat_u16, flags, payload_bytes)
+    payload     = synthetic_payload(payload_bytes)
+    return header + payload
+
+
+# ── Benchmark ─────────────────────────────────────────────────────────────────
+
+def bench_encode_decode(n_iterations: int = 10_000) -> dict:
+    results = {}
+    for label, (heat, desc, byte_size) in FIDELITY_LEVELS.items():
+        packet = encode_node_packet(heat, byte_size)
+        packet_size = len(packet)
+
+        t0 = time.perf_counter()
+        for _ in range(n_iterations):
+            _ = encode_node_packet(heat, byte_size)
+        elapsed = time.perf_counter() - t0
+
+        throughput_mbps = (packet_size * n_iterations) / elapsed / 1_024**2
+
+        # How many of these fit in one heartbeat tick at 7.9 GB/s?
+        packets_per_tick = int(INTER_BUS_BYTES_PER_S * HEARTBEAT_TICK_S / packet_size)
+
+        results[label] = {
+            "heat":              round(heat, 4),
+            "description":       desc,
+            "packet_bytes":      packet_size,
+            "tokens_est":        TOKEN_ESTIMATES[label],
+            "bytes_per_token":   round(packet_size / max(1, TOKEN_ESTIMATES[label]), 1),
+            "encode_us":         round((elapsed / n_iterations) * 1e6, 2),
+            "throughput_mbps":   round(throughput_mbps, 1),
+            "packets_per_140ms_tick": packets_per_tick,
+        }
+
+    return results
+
+
+def compute_ring_recommendation(results: dict) -> dict:
+    """
+    Recommend ring buffer size based on fidelity distribution.
+
+    Assumptions:
+      - 95% of nodes are ≤ warm heat (256 bytes)
+      - 4% are active-hot (2–8 KB)
+      - 1% are sovereign (32 KB)
+      - Target: buffer 1 full tick of mixed traffic
+      - Safety margin: 4×
+    """
+    # Realistic node distribution per 140ms tick
+    tick_distribution = {
+        "α_floor":   500,    # ~3.5K nodes/second at minimum heat
+        "low":       200,
+        "warm":      100,
+        "active":    30,
+        "hot":       15,
+        "burning":   4,
+        "sovereign": 1,
+    }
+
+    tick_bytes = sum(
+        results[label]["packet_bytes"] * count
+        for label, count in tick_distribution.items()
+        if label in results
+    )
+
+    ring_base       = tick_bytes * 4         # 4× safety margin
+    ring_aligned    = max(4 * 1024**2, ring_base)  # minimum 4 MB
+    # Round up to next power of 2 MiB
+    mib = 1024**2
+    ring_mib = 1
+    while ring_mib * mib < ring_aligned:
+        ring_mib *= 2
+
+    # Time to drain ring at bus speed
+    drain_ms = (ring_mib * mib) / INTER_BUS_BYTES_PER_S * 1000
+
+    return {
+        "tick_traffic_bytes":   tick_bytes,
+        "tick_traffic_kb":      round(tick_bytes / 1024, 1),
+        "recommended_ring_mib": ring_mib,
+        "drain_time_ms":        round(drain_ms, 3),
+        "ring_as_ticks_buffer": round(ring_mib * mib / tick_bytes, 1),
+        "conclusion": (
+            f"Ring size {ring_mib} MiB gives {round(ring_mib * mib / tick_bytes, 1)}× "
+            f"tick buffering. Drains in {round(drain_ms, 3)}ms at 7.9 GB/s. "
+            f"Tick traffic at mixed fidelity: {round(tick_bytes/1024, 1)} KB / 140ms."
+        ),
+    }
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    print("=" * 70)
+    print("Arc SLP Fidelity ↔ Bus Sizing Benchmark")
+    print(f"Inter-bus speed: {INTER_BUS_GBPS} GB/s  |  Tick: {HEARTBEAT_TICK_S*1000:.0f}ms")
+    print("=" * 70)
+
+    results = bench_encode_decode(n_iterations=10_000)
+
+    print(f"\n{'Level':<12} {'Heat':>7} {'Bytes':>8} {'Tokens':>7} {'B/tok':>6} "
+          f"{'Encode µs':>10} {'MB/s':>8} {'Pkts/tick':>12}")
+    print("-" * 70)
+    for label, r in results.items():
+        print(
+            f"{label:<12} {r['heat']:>7.4f} {r['packet_bytes']:>8} {r['tokens_est']:>7} "
+            f"{r['bytes_per_token']:>6.1f} {r['encode_us']:>10.2f} {r['throughput_mbps']:>8.1f} "
+            f"{r['packets_per_140ms_tick']:>12,}"
+        )
+
+    rec = compute_ring_recommendation(results)
+    print("\n" + "=" * 70)
+    print("Ring Buffer Recommendation")
+    print("=" * 70)
+    print(f"  Tick traffic (mixed fidelity): {rec['tick_traffic_kb']} KB / tick")
+    print(f"  Recommended ring size:         {rec['recommended_ring_mib']} MiB")
+    print(f"  Ring as tick buffer:           {rec['ring_as_ticks_buffer']}× ticks")
+    print(f"  Drain time at 7.9 GB/s:        {rec['drain_time_ms']} ms")
+    print(f"\n  → {rec['conclusion']}")
+
+    # Save results
+    out = Path(__file__).parent.parent / "data" / "bench_bus_fidelity.json"
+    out.parent.mkdir(exist_ok=True)
+    out.write_text(json.dumps({"levels": results, "recommendation": rec}, indent=2))
+    print(f"\n  Results saved → {out}")

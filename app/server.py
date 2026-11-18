@@ -1,0 +1,375 @@
+"""
+app/server.py — Arc interaction server
+
+FastAPI + WebSocket backend:
+  GET  /                     → serves index.html
+  GET  /api/status           → engine status (heartbeat, GPU, API health)
+  POST /api/chat             → single-turn completion (JSON)
+  WS   /ws/chat              → streaming chat (WebSocket)
+  GET  /api/memory/search    → Loci memory search
+  POST /api/memory/ingest    → ingest a document into Loci
+  GET  /api/health           → provider health (xAI + nexos + local)
+  POST /mcp                  → MCP protocol endpoint (tool calls)
+
+MCP compatibility:
+  Implements a subset of the Model Context Protocol server spec.
+  Tools exposed: arc_chat, arc_memory_search, arc_status, arc_ingest
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import sys
+import time
+from pathlib import Path
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Arc core
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from core.heartbeat   import HeartbeatEngine, LANE_RTX, LANE_ARC, LANE_CPU
+from core.engine_sync import EngineSync
+from core.gpu_offload import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
+from core.api_provision import APIProvisioner, CompletionRequest, ChatMessage, Provider
+
+
+# ── App setup ─────────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title="Arc",
+    description="Arc — Loci-powered local AI with dynamic GPU offloading",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# ── Global state (initialised in lifespan) ────────────────────────────────────
+
+heartbeat:    HeartbeatEngine | None   = None
+engine_sync:  EngineSync | None        = None
+gpu_manager:  GPUOffloadManager | None = None
+provisioner:  APIProvisioner | None    = None
+_hb_task:     asyncio.Task | None      = None
+
+
+@app.on_event("startup")
+async def startup() -> None:
+    global heartbeat, engine_sync, gpu_manager, provisioner, _hb_task
+
+    # Heartbeat
+    heartbeat = HeartbeatEngine()
+    heartbeat.register_worker("rtx-worker-0", LANE_RTX)
+    heartbeat.register_worker("arc-worker-0", LANE_ARC)
+    heartbeat.register_worker("cpu-worker-0", LANE_CPU)
+
+    # Engine sync (every 50 ticks)
+    engine_sync = EngineSync()
+    engine_sync.ensure_db()
+    heartbeat.on_sync(engine_sync.sync_tick)
+
+    # GPU offload manager
+    gpu_manager = GPUOffloadManager()
+
+    # API provisioner
+    provisioner = APIProvisioner.from_config()
+    await provisioner.start()
+
+    # Start heartbeat in background
+    _hb_task = asyncio.create_task(heartbeat.run())
+
+
+@app.on_event("shutdown")
+async def shutdown() -> None:
+    if heartbeat:
+        heartbeat.stop()
+    if _hb_task:
+        _hb_task.cancel()
+    if provisioner:
+        await provisioner.stop()
+    if engine_sync:
+        engine_sync.close()
+
+
+# ── Routes ────────────────────────────────────────────────────────────────────
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    index = STATIC_DIR / "index.html"
+    if index.exists():
+        return HTMLResponse(index.read_text())
+    return HTMLResponse("<h1>Arc</h1><p>Static files not found.</p>")
+
+
+@app.get("/api/status")
+async def status():
+    state = engine_sync.state if engine_sync else {}
+    rtx   = query_vram(_LANE_RTX)
+    arc   = query_vram(_LANE_ARC)
+
+    # Read shm status files
+    hb_status = {}
+    try:
+        hb_status = json.loads(Path("/dev/shm/arc_status.json").read_text())
+    except (OSError, json.JSONDecodeError):
+        pass
+
+    return {
+        "timestamp":       time.time(),
+        "heartbeat":       hb_status,
+        "engine": {
+            "tick_id":         getattr(state, "tick_id", 0),
+            "node_count":      getattr(state, "loci_node_count", 0),
+            "ledger_rows":     getattr(state, "loci_ledger_rows", 0),
+            "drift_detected":  getattr(state, "drift_detected", False),
+        },
+        "gpu": {
+            "rtx": {
+                "total_mb": rtx.total_mb,
+                "used_mb":  rtx.used_mb,
+                "free_mb":  rtx.free_mb,
+                "util_pct": round(rtx.utilisation * 100, 1),
+            },
+            "arc": {
+                "total_mb": arc.total_mb,
+                "used_mb":  arc.used_mb,
+                "free_mb":  arc.free_mb,
+                "util_pct": round(arc.utilisation * 100, 1),
+            },
+        },
+    }
+
+
+@app.get("/api/health")
+async def health():
+    if not provisioner:
+        return {"error": "provisioner not started"}
+    h = await provisioner.refresh_health()
+    return {
+        p.name: {
+            "reachable":  ph.reachable,
+            "latency_ms": round(ph.latency_ms, 1),
+            "error":      ph.error,
+        }
+        for p, ph in h.items()
+    }
+
+
+# ── Chat (REST) ───────────────────────────────────────────────────────────────
+
+class ChatRequest(BaseModel):
+    messages:    list[dict]           # [{role, content}]
+    model:       str | None = None
+    provider:    str = "LOCAL"
+    max_tokens:  int = 1024
+    temperature: float = 0.7
+
+
+@app.post("/api/chat")
+async def chat(req: ChatRequest):
+    if not provisioner:
+        return JSONResponse({"error": "provisioner not ready"}, status_code=503)
+
+    provider = Provider[req.provider.upper()] if req.provider.upper() in Provider.__members__ \
+               else Provider.LOCAL
+
+    completion_req = CompletionRequest(
+        messages=[ChatMessage(role=m["role"], content=m["content"]) for m in req.messages],
+        model=req.model,
+        max_tokens=req.max_tokens,
+        temperature=req.temperature,
+        provider=provider,
+    )
+
+    resp = await provisioner.complete(completion_req)
+
+    if resp.error:
+        return JSONResponse({"error": resp.error}, status_code=502)
+
+    return {
+        "content":     resp.content,
+        "provider":    resp.provider.name,
+        "model":       resp.model,
+        "tokens_used": resp.tokens_used,
+        "latency_ms":  round(resp.latency_ms, 1),
+    }
+
+
+# ── Chat (WebSocket streaming) ────────────────────────────────────────────────
+
+@app.websocket("/ws/chat")
+async def ws_chat(ws: WebSocket):
+    await ws.accept()
+    try:
+        while True:
+            raw = await ws.receive_text()
+            data = json.loads(raw)
+
+            provider_name = data.get("provider", "LOCAL").upper()
+            provider = Provider[provider_name] if provider_name in Provider.__members__ \
+                       else Provider.LOCAL
+
+            req = CompletionRequest(
+                messages=[
+                    ChatMessage(role=m["role"], content=m["content"])
+                    for m in data.get("messages", [])
+                ],
+                model=data.get("model"),
+                max_tokens=data.get("max_tokens", 1024),
+                temperature=data.get("temperature", 0.7),
+                provider=provider,
+                stream=True,
+            )
+
+            if not provisioner:
+                await ws.send_json({"error": "provisioner not ready"})
+                continue
+
+            await ws.send_json({"type": "start"})
+            async for chunk in provisioner.stream(req):
+                await ws.send_json({"type": "chunk", "content": chunk})
+            await ws.send_json({"type": "done"})
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        try:
+            await ws.send_json({"type": "error", "error": str(exc)})
+        except Exception:
+            pass
+
+
+# ── Memory routes ─────────────────────────────────────────────────────────────
+
+@app.get("/api/memory/search")
+async def memory_search(q: str = "", limit: int = 10):
+    if not engine_sync or not engine_sync._conn:
+        return {"results": [], "error": "db not ready"}
+    try:
+        rows = engine_sync._conn.execute(
+            "SELECT node_id, category, content, heat_u16 FROM nodes WHERE content LIKE ? LIMIT ?",
+            (f"%{q}%", limit),
+        ).fetchall()
+        return {
+            "query":   q,
+            "results": [
+                {"node_id": r[0], "category": r[1], "content": r[2][:200], "heat_u16": r[3]}
+                for r in rows
+            ],
+        }
+    except Exception as exc:
+        return {"results": [], "error": str(exc)}
+
+
+class IngestRequest(BaseModel):
+    content:  str
+    category: str = "STANDARD"
+    project:  str = "default"
+
+
+@app.post("/api/memory/ingest")
+async def memory_ingest(req: IngestRequest):
+    if not engine_sync or not engine_sync._conn:
+        return JSONResponse({"error": "db not ready"}, status_code=503)
+    try:
+        import hashlib, uuid
+        node_id = str(uuid.uuid4())
+        now     = time.time()
+        h       = hashlib.sha256(
+            f"{now}{req.category}{req.content}".encode()
+        ).hexdigest()
+        engine_sync._conn.execute(
+            "INSERT INTO nodes (node_id, category, project, content, drive_hash, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (node_id, req.category, req.project, req.content, h, now, now),
+        )
+        engine_sync._conn.commit()
+        return {"node_id": node_id, "status": "ingested"}
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+# ── MCP endpoint ──────────────────────────────────────────────────────────────
+
+MCP_TOOLS = [
+    {
+        "name":        "arc_chat",
+        "description": "Send a message to Arc and get a response",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "message":  {"type": "string"},
+                "provider": {"type": "string", "enum": ["LOCAL", "NEXOS", "XAI"]},
+            },
+            "required": ["message"],
+        },
+    },
+    {
+        "name":        "arc_memory_search",
+        "description": "Search Arc's Loci memory for relevant context",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": 5},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name":        "arc_status",
+        "description": "Get Arc engine status (heartbeat, GPU, memory)",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+]
+
+
+@app.post("/mcp")
+async def mcp_endpoint(request: dict):
+    method = request.get("method", "")
+
+    if method == "tools/list":
+        return {"tools": MCP_TOOLS}
+
+    if method == "tools/call":
+        tool  = request.get("params", {}).get("name", "")
+        args  = request.get("params", {}).get("arguments", {})
+
+        if tool == "arc_status":
+            s = await status()
+            return {"content": [{"type": "text", "text": json.dumps(s)}]}
+
+        if tool == "arc_memory_search":
+            r = await memory_search(q=args.get("query", ""), limit=args.get("limit", 5))
+            return {"content": [{"type": "text", "text": json.dumps(r)}]}
+
+        if tool == "arc_chat":
+            chat_req = ChatRequest(
+                messages=[{"role": "user", "content": args.get("message", "")}],
+                provider=args.get("provider", "LOCAL"),
+            )
+            r = await chat(chat_req)
+            return {"content": [{"type": "text", "text": json.dumps(r)}]}
+
+    return JSONResponse({"error": f"unknown method: {method}"}, status_code=400)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=7860, reload=False, log_level="info")
