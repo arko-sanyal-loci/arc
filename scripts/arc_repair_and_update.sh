@@ -62,6 +62,12 @@ pkg_installed() { dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q "insta
 pkg_available() { apt-cache show "$1" >/dev/null 2>&1; }
 apt_q() { DEBIAN_FRONTEND=noninteractive apt-get -o Dpkg::Options::=--force-confold "$@"; }
 
+# WSL2: GPU drivers come from Windows. Linux kernel GPU drivers, DKMS,
+# headers and firmware must NOT be installed inside WSL (a DKMS build against
+# the WSL kernel fails and leaves dpkg with "error code (1)").
+IS_WSL=0
+if [[ -n "${WSL_DISTRO_NAME:-}" ]] || grep -qi microsoft /proc/version 2>/dev/null; then IS_WSL=1; fi
+
 echo -e "${C_B}Arc workstation repair & update${C_0}  ·  $(date)  ·  log: $LOG"
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -72,6 +78,11 @@ diagnose() {
   . /etc/os-release 2>/dev/null || true
   ok "${PRETTY_NAME:-unknown OS}  ·  kernel $(uname -r)  ·  $(uname -m)"
   UBU_VER="${VERSION_ID:-0}"; UBU_CODENAME="${VERSION_CODENAME:-unknown}"
+  if [[ $IS_WSL -eq 1 ]]; then
+    note "Running inside WSL2: GPU drivers are the Windows ones; this script only manages user-space runtimes here"
+    local wsl_bad; wsl_bad=$(dpkg -l 2>/dev/null | awk '$1 ~ /^(ii|iU|iF|iH)$/ && $2 ~ /^(nvidia-driver-|nvidia-dkms-|nvidia-kernel-|cuda-drivers|linux-modules-nvidia)/ {print $2}')
+    [[ -n "$wsl_bad" ]] && bad "Linux NVIDIA driver packages are installed inside WSL (they can't build here and break dpkg): $(echo $wsl_bad)"
+  fi
 
   step "Disk space (a full /boot is the #1 cause of dpkg error 1 during kernel upgrades)"
   for m in / /boot /var; do
@@ -109,7 +120,7 @@ diagnose() {
     if [[ -n "$mk" ]] && grep -qiE "error" "$mk"; then
       bad "latest DKMS build log has errors: $mk"; grep -iE "error" "$mk" | tail -n 5 | sed 's/^/      /'
     fi
-    if ! dpkg-query -W "linux-headers-$(uname -r)" >/dev/null 2>&1; then
+    if [[ $IS_WSL -eq 0 ]] && ! dpkg-query -W "linux-headers-$(uname -r)" >/dev/null 2>&1; then
       bad "headers for the running kernel are missing (linux-headers-$(uname -r)); DKMS cannot build"
     fi
   else dim "dkms not installed"; fi
@@ -136,11 +147,14 @@ diagnose() {
   if have lspci; then lspci -nn | grep -Ei "vga|3d|display" | sed 's/^/      /'; fi
   if have nvidia-smi && nvidia-smi -L >/dev/null 2>&1; then
     ok "NVIDIA: $(nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader | head -1)"
-    if ! modinfo nvidia 2>/dev/null | grep -qi "license:.*Dual MIT/GPL"; then
+    if [[ $IS_WSL -eq 0 ]] && ! modinfo nvidia 2>/dev/null | grep -qi "license:.*Dual MIT/GPL"; then
       note "NVIDIA kernel module may not be the open variant (Blackwell requires nvidia-driver-XXX-open)"
     fi
   else bad "NVIDIA driver not loaded (nvidia-smi fails)"; fi
-  if [[ -d /sys/module/xe ]]; then ok "Intel xe driver is loaded"
+  if [[ $IS_WSL -eq 1 ]]; then
+    [[ -e /dev/dxg ]] && ok "WSL GPU bridge /dev/dxg present (B70 and RTX are exposed through the Windows drivers)" \
+                      || bad "/dev/dxg missing: update the Windows GPU drivers and run 'wsl --update' in Windows"
+  elif [[ -d /sys/module/xe ]]; then ok "Intel xe driver is loaded"
   else bad "Intel xe driver is not loaded (the B70 needs xe; kernel 6.17+ recommended, 7.0 is known good)"; fi
   if have xpu-smi; then ok "xpu-smi present"; else note "xpu-smi not installed (needed for live B70 VRAM telemetry)"; fi
   if have clinfo; then clinfo -l 2>/dev/null | sed 's/^/      /'; fi
@@ -169,8 +183,19 @@ repair() {
     confirm "Remove old kernels with 'apt autoremove --purge'?" && apt_q autoremove --purge -y
   fi
 
+  # Linux NVIDIA driver inside WSL → purge (Windows driver provides the GPU)
+  if [[ $IS_WSL -eq 1 ]]; then
+    local wsl_bad; wsl_bad=$(dpkg -l 2>/dev/null | awk '$1 !~ /^(rc|un)$/ && $2 ~ /^(nvidia-driver-|nvidia-dkms-|nvidia-kernel-|cuda-drivers|linux-modules-nvidia)/ {print $2}')
+    if [[ -n "$wsl_bad" ]]; then
+      step "Linux NVIDIA driver packages inside WSL"
+      echo "$wsl_bad" | sed 's/^/      /'
+      confirm "Purge these (the Windows NVIDIA driver keeps working; CUDA in WSL uses it)?" && \
+        { dpkg --purge --force-depends $wsl_bad; apt_q -f install -y; }
+    fi
+  fi
+
   # Missing headers → DKMS can't build
-  if ! dpkg-query -W "linux-headers-$(uname -r)" >/dev/null 2>&1; then
+  if [[ $IS_WSL -eq 0 ]] && ! dpkg-query -W "linux-headers-$(uname -r)" >/dev/null 2>&1; then
     step "Installing headers for the running kernel"
     apt_q install -y "linux-headers-$(uname -r)" || bad "could not install headers"
   fi
@@ -235,20 +260,30 @@ update() {
 
   step "OS packages"
   apt_q update && apt_q full-upgrade -y || { bad "full-upgrade failed. Run --repair first."; return; }
-  apt_q install -y --no-install-recommends build-essential dkms "linux-headers-$(uname -r)" \
-    curl wget gpg ca-certificates software-properties-common pciutils clinfo ubuntu-drivers-common
+  if [[ $IS_WSL -eq 1 ]]; then
+    apt_q install -y --no-install-recommends build-essential curl wget gpg ca-certificates \
+      software-properties-common pciutils clinfo
+  else
+    apt_q install -y --no-install-recommends build-essential dkms "linux-headers-$(uname -r)" \
+      curl wget gpg ca-certificates software-properties-common pciutils clinfo ubuntu-drivers-common
+  fi
 
   step "NVIDIA RTX 5060 Ti: open kernel driver"
+  if [[ $IS_WSL -eq 1 ]]; then
+    note "WSL: skipped. Update the NVIDIA driver in Windows (NVIDIA app or nvidia.com) instead."
+  else
   local rec; rec=$(ubuntu-drivers list 2>/dev/null | grep -oE "nvidia-driver-[0-9]+-open" | sort -t- -k3 -n | tail -1)
   if [[ -n "$rec" ]]; then
     local cur; cur=$(dpkg -l 'nvidia-driver-*' 2>/dev/null | awk '/^ii/{print $2}' | head -1)
     note "installed: ${cur:-none}   newest available open driver: $rec"
     if [[ "$cur" != "$rec" ]] && confirm "Install $rec?"; then apt_q install -y "$rec" && ok "$rec installed"; fi
   else note "ubuntu-drivers found no open driver; check 'ubuntu-drivers list'"; fi
+  fi
 
   step "CUDA toolkit (Blackwell needs 12.8+)"
   if ! pkg_installed cuda-keyring; then
     local repo="ubuntu${VERSION_ID//./}"
+    [[ $IS_WSL -eq 1 ]] && repo="wsl-ubuntu"     # NVIDIA's WSL repo ships no driver
     local url="https://developer.download.nvidia.com/compute/cuda/repos/${repo}/x86_64/cuda-keyring_1.1-1_all.deb"
     if confirm "Add NVIDIA's CUDA network repo for $repo?"; then
       local tmp; tmp=$(mktemp -d)
@@ -271,14 +306,17 @@ update() {
   fi
   local want=(libze-intel-gpu1 libze1 libze-dev intel-opencl-icd ocl-icd-libopencl1 clinfo
               intel-media-va-driver-non-free vainfo mesa-vulkan-drivers vulkan-tools
-              intel-gpu-tools nvtop xpu-smi linux-firmware)
+              intel-gpu-tools nvtop xpu-smi)
+  [[ $IS_WSL -eq 0 ]] && want+=(linux-firmware)
   local list=(); for p in "${want[@]}"; do pkg_available "$p" && list+=("$p") || dim "not in your repos: $p"; done
   apt_q install -y "${list[@]}" && ok "Intel runtime packages current"
   have xpu-smi || note "xpu-smi not in apt: get the .deb from github.com/intel/xpumanager releases"
   getent group render >/dev/null && usermod -aG render,video "$REAL_USER" && ok "$REAL_USER is in render,video groups"
 
   step "Firmware"
-  if have fwupdmgr; then
+  if [[ $IS_WSL -eq 1 ]]; then
+    note "WSL: firmware is managed by Windows (Windows Update, Sparkle/Intel tools, motherboard vendor)."
+  elif have fwupdmgr; then
     fwupdmgr refresh --force >/dev/null 2>&1
     fwupdmgr get-updates 2>/dev/null | sed 's/^/      /'
     confirm "Apply the firmware updates listed above (fwupd)?" && fwupdmgr update -y
