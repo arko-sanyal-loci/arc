@@ -1,6 +1,16 @@
 # Arc Hybrid Inference Engine: Design and Plan
 
-*Draft 1, 2026-11-18. Status: proposal for Arko's review. Nothing here is implemented yet.*
+*Draft 2, 2026-11-18. Status: proposal for Arko's review.*
+
+> **Reconciled with prior verified work.** Draft 1 proposed a cross-vendor
+> draft (RTX) / target (B70) split in one process. That contradicts measured
+> findings in `loci-memory-engine-1/docs/dual-gpu-coding-intelligence-blueprint.md`
+> (§4: one process with CUDA and SYCL is ruled out on this box; the
+> `SYCL_UR_USE_LEVEL_ZERO_V2=0` fix is per-process; Level Zero Sysman
+> free-memory queries fail here). Draft 2 follows the blueprint. A parallel
+> draft with the same core idea exists on `LOCI-MEMORY-ENGINE` branch
+> `arc/hybrid-inference-design` (`docs/hybrid-metal-remote-inference-design.md`);
+> section 10 lists the differences so the two can be merged into one.
 
 ## 1. What we are building
 
@@ -37,45 +47,41 @@ every token) the wrong abstraction**. It is also what `core/gpu_offload.py`
 currently pretends to do: it only moves layer *names* between two lists.
 
 The right split is at the **token level**: the lanes exchange token IDs and
-log-probabilities, which are a few bytes per step. That is exactly what
-speculative decoding needs, and it fits easily inside the existing 4 MiB
-ring and 140 ms heartbeat.
+log-probabilities, which are a few bytes per step. Between the lanes, only requests and
+results cross (section 3), which fits easily inside the existing 4 MiB ring
+and 140 ms heartbeat.
 
-## 3. Local engine: cross-GPU speculative decoding
+## 3. Local engine: two independent lanes, speculation inside the B70
 
 ```
-           prompt + LOCI context (HOT tier)
-                      │
-       ┌──────────────┴──────────────┐
-       ▼                             ▼
-  Y=0 RTX 5060 Ti               Y=1 Arc Pro B70
-  draft model (small,           target model (same tokenizer
-  same family)                  family, e.g. 30–35B MoE)
-  proposes k tokens  ──ids──►   verifies k tokens in one pass
-                     ◄─accept─  returns accepted prefix + 1
+  Y=0 RTX 5060 Ti  (compact lane, always warm)     Y=1 Arc Pro B70  (expand lane)
+  ─ completions, routing, embeddings,              ─ target model, e.g. 30B-A3B MoE
+    reranking, local self-check of drafts          ─ + small same-tokenizer draft model
+                                                     (llama-server --model-draft)
+           │                                                   │
+           └──────── separate processes, each its own backend ─┘
+                     only requests/results cross the bus
 ```
 
-- **Draft** on the RTX: a small model from the same family as the target, so
-  the tokenizer matches exactly. Blackwell is fast at small batched decode.
-- **Target** on the B70: the 32 GB card holds the big model and its KV cache.
-  `gpu_governor.py` shows a `loci-arc-35b` (qwen3.6-35b-a3b MoE) on llama.cpp
-  SYCL already in use on this card; that is a good first target.
-- **Implementation path, in order of preference:**
-  1. *One process, two backends.* llama.cpp can load CUDA and SYCL backends
-     side by side (dynamic backend loading), and its server supports a draft
-     model on a separate device. This keeps the draft/verify loop in-process,
-     with no HTTP per step. **Needs a spike to confirm on this exact box**
-     before we rely on it.
-  2. *Two processes, shared-memory token channel.* If (1) does not work, run
-     the draft and target as separate engines and exchange token IDs through a
-     new `/dev/shm/arc_spec_ring` using the heartbeat's ring format. More
-     moving parts, still only bytes per step.
-  3. *Fallback, no speculation.* Target alone on the B70 via vLLM (Intel
-     LLM-Scaler, already scripted in `scripts/setup_intel_vllm.sh`). Simple
-     and good for concurrent requests.
-- **Measured, not assumed.** The engine records acceptance rate and tokens/s
-  per lane. If acceptance drops below a threshold (start at 0.5), speculation
-  turns itself off for that request type.
+- **Two lanes, two processes.** CUDA on the RTX, SYCL on the B70, each in its
+  own server. This isolates the B70's SYCL quirk
+  (`SYCL_UR_USE_LEVEL_ZERO_V2=0`, mandatory for the expand-lane server) and
+  keeps the compact lane warm while the expand lane is busy. This matches the
+  blueprint's verified design.
+- **Speculative decoding inside the B70.** Draft and target share the card and
+  the process (`llama-server --model-draft`, explicit `--device SYCL0`). 32 GB
+  holds both. `gpu_governor.py` shows a `loci-arc-35b` (qwen3.6-35b-a3b MoE) on
+  llama.cpp SYCL already on this card; the blueprint's candidate is
+  `qwen3-coder:30b` (30B-A3B). The draft must share the target's tokenizer.
+- **The RTX checks, it does not draft.** It scores expand-lane output (tests,
+  diff applies, confidence from token log-probs) before anything reaches the
+  oversight gate. That is cheap work that suits an always-warm small model.
+- **Cross-vendor drafting is a later experiment only.** If ever tried, use two
+  processes with a shared-memory token channel or llama.cpp's RPC backend
+  (token IDs are bytes per step), never one binary with both backends.
+- **Measured, not assumed.** Record acceptance rate and tokens/s for target
+  alone versus target + draft. If acceptance falls below a threshold (start at
+  0.5) speculation turns off for that request type.
 
 The RTX also keeps embeddings (nomic-embed via Ollama/CUDA) so retrieval never
 competes with the target model for B70 memory.
@@ -129,7 +135,7 @@ One `TelemetrySnapshot` per heartbeat sync (about 7 s) and on demand:
 | Signal | Source | If unavailable |
 |---|---|---|
 | RTX VRAM used/free, temp, power | NVML (`nvidia-smi` / pynvml) | `null` |
-| B70 VRAM used/free | Level Zero Sysman `zesMemoryGetState`; else `xpu-smi`; else per-process `drm-resident-vram0` in fdinfo | `null`, never a placeholder |
+| B70 VRAM used/free | `xpu-smi`; else `llama-server /metrics`; else per-process `drm-resident-vram0` in fdinfo. Level Zero Sysman is tried last: its free-memory query is confirmed to fail on this box | `null`, never a placeholder |
 | B70 temp, power | Sysman / `xpu-smi` | `null` |
 | tokens/s, TTFT, queue depth per lane | engine metrics endpoints | `null` |
 | speculative acceptance rate | local engine | `null` |
@@ -168,6 +174,17 @@ masks and `/dev/shm` ring stay as they are for lane-to-lane traffic on the
 box (token IDs for speculation, telemetry snapshots). Nothing on this plane
 leaves the machine.
 
+## 6b. Context: LOCI LDCE compression (implemented)
+
+What goes into the prompt now follows the LOCI engine's LDCE
+(`core/context_compression.py`, parity-tested against
+`loci_engine.session_continuity.compute_ldce_tiers`): kernel items in full,
+hop items as short symbols with `arc_memory_expand` for the full text,
+offload behind `arc_memory_search`. Kernel items are pinned in Arc's VRAM
+placement tier because they form the stable prompt prefix, which the
+expand-lane server keeps in its KV prefix cache. Remote oversight digests
+reuse the same symbols, so the remote sees IDs and gists, not the memory store.
+
 ## 7. Defects found while reading (fix as part of this work)
 
 1. `core/gpu_offload.py`: B70 live VRAM read is wrong (nonexistent
@@ -201,9 +218,9 @@ Sysman / `xpu-smi` readers, `null` for unknowns, published on the heartbeat
 and `/api/status`. Remove the hardcoded fallbacks. Tests use fake readers.
 
 **Phase 2: real local serving.** Pick and stand up the target engine on the
-B70 and the draft/embedding engine on the RTX. Run the llama.cpp
-dual-backend spike (section 3, path 1). Record tokens/s and acceptance rate
-for: target alone, target + draft. Keep whichever wins, with the numbers in
+B70 and the draft/embedding engine on the RTX. Turn on speculative
+decoding on the B70 (section 3). Record tokens/s and acceptance rate for:
+target alone, target + draft. Keep whichever wins, with the numbers in
 this doc.
 
 **Phase 3: router v2.** Replace `_pick_provider` health-only fallback with a
@@ -229,3 +246,25 @@ in `LOCI-MEMORY-ENGINE`), with tests, after Arko approves.
 3. Which request classes count as high-stakes (always get oversight)?
 4. Should oversight ever *block* an answer, or only flag it? Proposal: flag only.
 5. Which remote is the overseer: a nexos.ai route (which model?) or xAI?
+
+6. Is the GPU box Windows + WSL2 (as in the September blueprint) or native
+   Linux now? `scripts/arc_repair_and_update.sh` handles both, but telemetry
+   tooling and the bus transport differ.
+
+## 10. Differences from the parallel draft (`arc/hybrid-inference-design`)
+
+Both drafts agree: local does the work; the remote reviews drafts rather than
+generating; oversight is gated (critical, failed, sampled, urgent) under a
+daily budget with step-down modes; verdicts go back over the LOCI secure bus
+into memory; telemetry is advisory and never grants authority.
+
+| Topic | This doc | Parallel draft | Proposal |
+|---|---|---|---|
+| Event names | `infer.*` under a new `loci.infer.v1` schema | `infer.*`, `oversight.*`, `node.telemetry`, `budget.state` | Use the parallel draft's six names, inside a separate `loci.infer.v1` schema so `loci.task.v1` stays frozen |
+| Oversight sample rate | 2 % | 10 % | Start at 10 % for the first week, then tune from data |
+| Hedged remote requests | Section 4.2, opt-in by predicted difficulty | "Parallel race", `urgent` only | Keep `urgent`-only until the budget ledger has a week of data |
+| Where the code lives | `arc` (`core/`) | `rag/` in the LOCI repo | Arc runtime in `arc`; bus schema in `LOCI-MEMORY-ENGINE` |
+| Context to the remote | digest + hashes | task summary + draft + test output | Same thing; adopt the parallel draft's wording |
+
+Once Arko picks, fold both into one doc in `LOCI-MEMORY-ENGINE/docs/` and
+leave a pointer here.
