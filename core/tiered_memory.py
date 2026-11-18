@@ -36,6 +36,16 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from core.heat import (
+    MEMORY_CLASSES,
+    TIER_HOT_BOUNDARY,
+    TIER_MILD_BOUNDARY,
+    VRAM_ADMISSION_THRESHOLD,
+    decay as heat_decay,
+    tier as heat_tier_label,
+    vram_eligible,
+)
+
 # ── Tier enum ────────────────────────────────────────────────────────────────
 
 class Tier(Enum):
@@ -52,10 +62,22 @@ TIER_THRESHOLDS: Dict[Tier, Tuple[float, float]] = {
 }
 
 def heat_to_tier(heat: float) -> Tier:
-    """Map an SLP heat value to the appropriate storage tier."""
-    if heat >= 0.70:
+    """Map an SLP heat value to the appropriate storage tier.
+
+    Two-threshold VRAM design (from core.heat):
+      - VRAM_ADMISSION_THRESHOLD (θ_HOT = 0.700): a node must CROSS this
+        threshold to be *admitted* to VRAM. Prevents thrashing.
+      - TIER_HOT_BOUNDARY (0.800): the tier *classification* boundary.
+        Nodes between 0.70–0.80 that already reside in VRAM stay there;
+        new nodes from DDR5 must cross 0.70 before promotion.
+
+    plan_migrations() uses pending_migrations() which calls heat_to_tier()
+    on the *current* p.heat; for admission gating on new placements,
+    callers should use core.heat.vram_eligible() directly.
+    """
+    if heat >= TIER_HOT_BOUNDARY:
         return Tier.VRAM
-    elif heat >= 0.35:
+    elif heat >= TIER_MILD_BOUNDARY:
         return Tier.DDR5
     else:
         return Tier.NVME
@@ -108,13 +130,16 @@ TIER_CAPACITIES: Dict[Tier, TierCapacity] = {
 
 @dataclass
 class NodePlacement:
-    node_id:      str
-    heat:         float
-    tier:         Tier
-    size_bytes:   int
-    placed_at_ns: int = field(default_factory=lambda: time.time_ns())
-    pinned:       bool = False       # sovereignty lock — never demote
-    dirty:        bool = False       # written to VRAM, not yet flushed to DDR5
+    node_id:        str
+    heat:           float
+    tier:           Tier
+    size_bytes:     int
+    placed_at_ns:   int = field(default_factory=lambda: time.time_ns())
+    pinned:         bool = False       # sovereignty lock — never demote
+    dirty:          bool = False       # written to VRAM, not yet flushed to DDR5
+    # Heat decay tracking — used by decay_heat() on each heartbeat tick
+    memory_class:   str  = "routine_observation"  # key into MEMORY_CLASSES
+    last_access_ts: float = field(default_factory=time.time)  # UNIX seconds
 
 @dataclass
 class TierStats:
@@ -172,47 +197,116 @@ class TieredMemoryManager:
 
     def place(
         self,
-        node_id:    str,
-        heat:       float,
-        size_bytes: int,
-        pinned:     bool = False,
+        node_id:      str,
+        heat:         float,
+        size_bytes:   int,
+        pinned:       bool = False,
+        memory_class: str  = "routine_observation",
     ) -> NodePlacement:
-        """Record where a node should live given its current heat."""
+        """Record where a node should live given its current heat.
+
+        Parameters
+        ----------
+        node_id      : unique SLP node identifier
+        heat         : current heat value H ∈ (alpha_floor, 1.0)
+        size_bytes   : serialised node size
+        pinned       : sovereignty lock — node never demotes from VRAM
+        memory_class : one of MEMORY_CLASSES keys; sets decay tau for this node
+        """
         tier = heat_to_tier(heat)
         with self._lock:
             placement = NodePlacement(
-                node_id    = node_id,
-                heat       = heat,
-                tier       = tier,
-                size_bytes = size_bytes,
-                pinned     = pinned,
+                node_id        = node_id,
+                heat           = heat,
+                tier           = tier,
+                size_bytes     = size_bytes,
+                pinned         = pinned,
+                memory_class   = memory_class,
+                last_access_ts = time.time(),
             )
             self._placements[node_id] = placement
         self._publish_state()
         return placement
 
     def update_heat(self, node_id: str, new_heat: float) -> Optional[NodePlacement]:
-        """
-        Update a node's heat. Returns the placement if tier changed,
-        None if the node stayed in the same tier (no migration needed).
+        """Update a node's heat.
+
+        Returns the placement if tier changed, None if the node stayed in
+        the same tier (no migration needed).
+        Also resets last_access_ts to now (a heat update implies a touch).
         """
         with self._lock:
             existing = self._placements.get(node_id)
             if existing is None:
                 return None
             if existing.pinned:
-                existing.heat = new_heat
+                existing.heat          = new_heat
+                existing.last_access_ts = time.time()
                 return None   # pinned nodes never migrate
 
             old_tier = existing.tier
             new_tier = heat_to_tier(new_heat)
-            existing.heat = new_heat
-            existing.tier = new_tier
+            existing.heat           = new_heat
+            existing.tier           = new_tier
+            existing.last_access_ts = time.time()
 
             if old_tier != new_tier:
                 self._publish_state()
                 return existing
             return None
+
+    def touch(self, node_id: str) -> None:
+        """Mark a node as recently accessed without changing its heat.
+
+        Prevents the node from being aged by decay_heat() until the next
+        tick completes.
+        """
+        with self._lock:
+            existing = self._placements.get(node_id)
+            if existing is not None:
+                existing.last_access_ts = time.time()
+
+    def decay_heat(self) -> List[Tuple[NodePlacement, Tier]]:
+        """Age every non-pinned node forward by elapsed time since last access.
+
+        Uses the hyperbolic scalar decay law from core.heat:
+            h_new = h / (1 + elapsed / tau)
+
+        where tau is set by the node's memory_class (e.g. routine_observation
+        τ=3d, valued_skill τ=20d, formative_scar τ=45d).
+
+        Called by the heartbeat engine every N ticks (~7 s via plan_migrations).
+
+        Returns
+        -------
+        List of (NodePlacement, new_tier) for nodes whose tier changed
+        after decay — these need actual migration.
+        """
+        now = time.time()
+        changed: List[Tuple[NodePlacement, Tier]] = []
+
+        with self._lock:
+            for p in self._placements.values():
+                if p.pinned:
+                    continue
+                mc         = MEMORY_CLASSES.get(p.memory_class,
+                                                 MEMORY_CLASSES["routine_observation"])
+                elapsed    = max(0.0, now - p.last_access_ts)
+                new_heat   = heat_decay(p.heat, elapsed, mc.tau_days)
+                # Clamp to alpha floor so heat never reaches zero
+                new_heat   = max(mc.alpha + 1e-9, new_heat)
+
+                old_tier   = p.tier
+                new_tier   = heat_to_tier(new_heat)
+                p.heat     = new_heat
+
+                if old_tier != new_tier:
+                    p.tier = new_tier
+                    changed.append((p, new_tier))
+
+        if changed:
+            self._publish_state()
+        return changed
 
     def evict(self, node_id: str) -> Optional[NodePlacement]:
         """Remove a node from the tier ledger (node expired / dropped)."""
