@@ -7,6 +7,7 @@ import io
 import json
 import re
 import subprocess
+import sys
 from threading import Thread
 import time
 from urllib.error import HTTPError
@@ -40,7 +41,7 @@ def browser():
             post(base, method="DELETE")
         except HTTPError as error:
             if error.code != 404:
-                raise
+                print(f"Browser cleanup returned HTTP {error.code}", file=sys.stderr)
 
 
 class Aperture:

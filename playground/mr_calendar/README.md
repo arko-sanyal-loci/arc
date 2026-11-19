@@ -1,5 +1,7 @@
 # Mr Calendar live scene playground
 
+Start with the [verification guide](VERIFICATION.md) to rerun the workstation checks and inspect their evidence.
+
 Arko Sanyal proposed motion-driven focus and varying packet fidelity by feature family. Codex implemented the capture experiment and the local tool interface.
 
 ## Capture
