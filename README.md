@@ -226,12 +226,12 @@ Loci Memory Engine   ←── Arc Runtime  ←── Chat UI  │
   Google Drive           Tiered Memory
 ```
 
-[LOCI-MEMORY-ENGINE](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE) ·
-[LOCI-Coordinate-BUS](https://github.com/arko-sanyal-loci/LOCI-Coordinate-BUS) ·
-[LOCI-Card](https://github.com/arko-sanyal-loci/LOCI-Card)
+[LOCI Memory Engine](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE) (engine and coordination bus) ·
+[LOCI / CARD papers](https://github.com/arko-sanyal-loci/loci-card-papers) ·
+[User guide](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE/blob/main/docs/USER_GUIDE.md)
 
 ---
 
 ## License
 
-MIT © [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci)
+[MIT](LICENSE) © 2026 [Billo Tech](https://github.com/billo-tech) / Arko Sanyal
