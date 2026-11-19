@@ -46,9 +46,11 @@ def ask(messages: list[dict], parallel: bool, token_limit: int) -> dict:
                           "options": {"num_predict": token_limit}}).encode()
     request = Request("http://127.0.0.1:11437/api/chat", data=payload, headers={
         "Content-Type": "application/json", "X-LOCI-Execution": "parallel" if parallel else "single",
+        "X-LOCI-Context": "compact",
     })
     with urlopen(request, timeout=300) as response:
         return {"locus": locus, "model": response.headers.get("X-LOCI-Model"),
+                "context_chars": response.headers.get("X-LOCI-Context-Chars"),
                 "answer": json.load(response)["message"]["content"]}
 
 
