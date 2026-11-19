@@ -43,3 +43,15 @@ At about 03:49 Asia/Dhaka, Firefox captured 31 advancing YouTube video samples a
 The original animated fixture selected 31 crops across the two occupied regions. At the reviewed instant, the focused and full images returned the correct label, `ORBIT-742`. The low-resolution whole frame returned `OBJECT-342`. The first run caught a stale crop after the subject moved. Requiring texture in the current frame corrected the fixture case. Neither check establishes semantic tracking across arbitrary footage.
 
 The MCP client discovered the four tools and verified isolated scratchpad writes, reads, and a routed local chat reply. The Antigravity example configuration has not been loaded into an IDE.
+
+## Writing and voice
+
+The `calendar_chat` tool accepts recent turns from its client. The `calendar_write` tool accepts an audience and returns Markdown for review in the client, with lists and language-tagged code blocks when requested. It does not run commands contained in a draft.
+
+For local full-duplex speech, NVIDIA PersonaPlex is a candidate. It receives and generates audio concurrently. The checkpoint requires Hugging Face access and acceptance of the model terms. The workstation request was denied without authentication. The RTX 5060 Ti had 16,311 MiB total and 4,980 MiB free during this check. NVIDIA documents CPU offload, but this workstation's overlap and interruption latency have yet to be measured. The voice engine and the LOCI tools would need a separate bridge before a live voice session could call LOCI. [PersonaPlex runtime](https://github.com/NVIDIA/personaplex) and [model access](https://huggingface.co/nvidia/personaplex-7b-v1).
+
+## Cue forecasting
+
+A causal forecast can estimate whether a scene transition is likely in the next two seconds. Give it only packets available at the forecast time. Audio dips, sustained quiet, spatial framing and changes in movement can be predictive together. A semantic match to earlier scenes can help interpret an ambiguous cue, provided the reference corpus excludes the clip and near duplicates.
+
+An initial experiment should use held-out scenes with annotated events and fake-outs. Compare audio-only, video-only, and combined inputs, with and without semantic retrieval. Report false alerts per minute, precision and recall, and warning time for correct alerts. Use only preceding context for each forecast and compare against an event-rate baseline.

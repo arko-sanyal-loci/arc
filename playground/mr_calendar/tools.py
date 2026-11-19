@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+from typing import Literal
+from typing_extensions import TypedDict
 from urllib.request import Request, urlopen
 
 from mcp.server.fastmcp import FastMCP
@@ -39,19 +41,49 @@ def scratchpad_recent() -> dict:
     return {"locus": locus, "notes": notes}
 
 
-@server.tool()
-def calendar_chat(question: str, parallel: bool = False) -> dict:
-    """Ask the local Mr Calendar runtime a text question."""
-    if not 0 < len(question) <= 4000:
-        raise ValueError("Supply 1–4000 characters")
-    payload = json.dumps({"stream": False, "messages": [{"role": "user", "content": question}],
-                          "options": {"num_predict": 640}}).encode()
+def ask(messages: list[dict], parallel: bool, token_limit: int) -> dict:
+    payload = json.dumps({"stream": False, "messages": messages,
+                          "options": {"num_predict": token_limit}}).encode()
     request = Request("http://127.0.0.1:11437/api/chat", data=payload, headers={
         "Content-Type": "application/json", "X-LOCI-Execution": "parallel" if parallel else "single",
     })
     with urlopen(request, timeout=300) as response:
         return {"locus": locus, "model": response.headers.get("X-LOCI-Model"),
                 "answer": json.load(response)["message"]["content"]}
+
+
+class Turn(TypedDict):
+    role: Literal["user", "assistant"]
+    content: str
+
+
+@server.tool()
+def calendar_chat(question: str, parallel: bool = False, history: list[Turn] | None = None) -> dict:
+    """Ask the local Mr Calendar runtime a text question."""
+    if not 0 < len(question) <= 4000:
+        raise ValueError("Supply 1–4000 characters")
+    history = history or []
+    if len(history) > 16 or sum(len(turn["content"]) for turn in history) > 12000:
+        raise ValueError("Supply at most 16 recent turns and 12000 history characters")
+    return ask([*history, {"role": "user", "content": question}], parallel, 640)
+
+
+@server.tool()
+def calendar_write(request: str, audience: str = "the project team", parallel: bool = False) -> dict:
+    """Draft concise Markdown with useful bullets and fenced code when requested."""
+    if not 0 < len(request) <= 4000 or not 0 < len(audience) <= 160:
+        raise ValueError("Supply a request up to 4000 characters and a short audience label")
+    result = ask([
+        {"role": "system", "content": (
+            "You are Mr Calendar's writing assistant. Write the requested artifact in Markdown. "
+            "Use a blank line before lists, headings only when useful, and fenced code blocks with "
+            "a language tag. Keep commands runnable when the facts are known. Preserve names, "
+            "dates, and provided numbers. Distinguish evidence from assumptions. Never claim "
+            "you ran a tool or verified a source unless the caller supplied that result."
+        )},
+        {"role": "user", "content": f"Intended audience: {audience}\n\n{request}"},
+    ], parallel, 1600)
+    return {**result, "format": "markdown"}
 
 
 @server.tool()
