@@ -25,9 +25,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from slp_encoding import ALPHA, H_MAX
-from cas_router import CASRouter, ProbeResult, UserSignal
-from overlap import DispatchTuple, OverlapScalars, compute_overlap_matrix
+from .slp_encoding import ALPHA, H_MAX
+from .cas_router import CASRouter, ProbeResult, UserSignal
+from .overlap import DispatchTuple, OverlapScalars, compute_overlap_matrix
 
 
 # ── Agreement threshold ───────────────────────────────────────────────────────

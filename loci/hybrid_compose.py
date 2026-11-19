@@ -28,7 +28,7 @@ import time
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
-from slp_encoding import ALPHA, H_MAX, SLPRegister, u16_to_heat
+from .slp_encoding import ALPHA, H_MAX, SLPRegister, u16_to_heat
 
 
 # ── Stream labels ─────────────────────────────────────────────────────────────

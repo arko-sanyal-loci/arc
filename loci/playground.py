@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Callable, Optional
 
-from slp_encoding import ALPHA, H_MAX, SLPRegister
+from .slp_encoding import ALPHA, H_MAX, SLPRegister
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ It runs your model locally with persistent memory, dynamic GPU offloading, and a
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![License: all rights reserved](https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey?style=flat-square)](LICENSE.md)
 [![Billo Tech](https://img.shields.io/badge/Billo%20Tech-arc-6c6cff?style=flat-square)](https://billo.tech)
 
 </div>
@@ -91,6 +91,9 @@ cp .env.example .env
 # 4. Launch
 bash start.sh
 # → http://localhost:7860
+
+# Tests
+python -m pytest -q
 ```
 
 ---
@@ -147,9 +150,12 @@ Arc maps every Loci SLP node to a storage tier by its heat value `H ∈ [0, 1]`:
 
 | Tier | Heat range | Storage | Why |
 |---|---|---|---|
-| **VRAM** | H ≥ 0.70 | 48 GB aggregate | Active inference — sub-ms latency |
-| **DDR5** | 0.35 ≤ H < 0.70 | 32 GB DDR5-5200 | Recent context — µs latency |
+| **VRAM** | H ≥ 0.80 | 48 GB aggregate | Active inference — sub-ms latency |
+| **DDR5** | 0.35 ≤ H < 0.80 | 32 GB DDR5-5200 | Recent context — µs latency |
 | **NVMe** | H < 0.35 | SSD | Cold history — ms latency, unlimited depth |
+
+`core/tiered_memory.heat_to_tier()` classifies at 0.80 today. The sweep-optimal admission value
+0.70 (`VRAM_ADMISSION_THRESHOLD`) is defined but not yet used; that choice is open.
 
 Heat increases on access and decays over time (`DECAY_GAMMA = 0.98` per tick).  
 Nodes are promoted and demoted automatically every 50 heartbeat ticks.
@@ -226,12 +232,12 @@ Loci Memory Engine   ←── Arc Runtime  ←── Chat UI  │
   Google Drive           Tiered Memory
 ```
 
-[LOCI-MEMORY-ENGINE](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE) ·
-[LOCI-Coordinate-BUS](https://github.com/arko-sanyal-loci/LOCI-Coordinate-BUS) ·
-[LOCI-Card](https://github.com/arko-sanyal-loci/LOCI-Card)
+[LOCI-MEMORY-ENGINE](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE) (engine and coordination bus) ·
+[loci-card-papers](https://github.com/arko-sanyal-loci/loci-card-papers) (research) ·
+[user guide](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE/blob/main/docs/USER_GUIDE.md)
 
 ---
 
 ## License
 
-MIT © [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci)
+© 2026 [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci). All rights reserved; the source is public to read, not licensed for reuse. See [LICENSE.md](LICENSE.md).

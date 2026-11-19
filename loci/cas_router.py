@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Any, Callable, Coroutine, Optional
 
-from slp_encoding import ALPHA, H_MAX, category_hash
+from .slp_encoding import ALPHA, H_MAX, category_hash
 
 logger = logging.getLogger(__name__)
 
