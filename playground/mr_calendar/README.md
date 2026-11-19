@@ -13,7 +13,7 @@ python playground/mr_calendar/live.py --frames 35 --ask fixture
 
 The capture asks an isolated Firefox session for screenshots of the video element. Timestamps are bracketed by two browser player-clock reads. Packets contain a 4 × 3 motion heat map, focus region and region color. The current frame must have texture in a tile to earn a high-resolution crop. A large global frame change returns focus to the whole scene. Setting `--ask` compares the same instant as a whole low-resolution view, a native crop and a full-resolution reference. A crop carries roughly one twelfth of the full frame's pixels. Depth, physical lighting and semantic object tracking are outside this fixture.
 
-Only derived measurements and the model review go to stdout. Raster captures stay in memory. This is sampled playback and not a browser decoder performance benchmark.
+By default, stdout contains derived measurements and model review. With --image-packets, it also includes the overview and enhanced tile JPEGs. This is sampled playback and not a browser decoder performance benchmark.
 
 ## Antigravity and individual loci
 
@@ -55,3 +55,11 @@ For local full-duplex speech, NVIDIA PersonaPlex is a candidate. It receives and
 A causal forecast can estimate whether a scene transition is likely in the next two seconds. Give it only packets available at the forecast time. Audio dips, sustained quiet, spatial framing and changes in movement can be predictive together. A semantic match to earlier scenes can help interpret an ambiguous cue, provided the reference corpus excludes the clip and near duplicates.
 
 An initial experiment should use held-out scenes with annotated events and fake-outs. Compare audio-only, video-only, and combined inputs, with and without semantic retrieval. Report false alerts per minute, precision and recall, and warning time for correct alerts. Use only preceding context for each forecast and compare against an event-rate baseline.
+
+## Microphone inputs and focus gradient
+
+Run `live.py --list-mics` to list microphone sources known to PipeWire or PulseAudio. Add `--mic SOURCE` once for each selected input, up to four. A paired Bluetooth headset qualifies once its microphone is available as an OS input. An output monitor cannot be selected as a microphone. With `--audio`, playback and microphones are independent tracks. The output carries 50 ms RMS features with source labels. It does not retain raw microphone audio, mix the inputs, or start listening by default.
+
+Every frame keeps a whole-scene 192 × 108 overview. The strongest qualifying tile can have native detail, and up to three additional tiles can have half-resolution detail. On sudden whole-frame motion, the overview doubles to 384 × 216 and the tile enhancements are omitted. Use `--image-packets` to include the actual overview and tile JPEGs. The priority matrix and tier labels are always present. The overview and JPEGs are lossy. Recovering fine detail elsewhere requires sampling the native frame while it is available.
+
+On 2026-11-20, a live fixture run produced 32 video packets and 80 simultaneous audio windows from each of the USB and analog inputs. The connected Echo Dot exposed playback only. No Bluetooth microphone was available for a capture test. Apple documents HomePod as an AirPlay playback destination. It did not appear as a workstation microphone. [Apple AirPlay guide](https://support.apple.com/en-gb/105068)
