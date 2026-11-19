@@ -9,6 +9,7 @@ import re
 import subprocess
 from threading import Thread
 import time
+from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -35,7 +36,11 @@ def browser():
     try:
         yield base
     finally:
-        post(base, method="DELETE")
+        try:
+            post(base, method="DELETE")
+        except HTTPError as error:
+            if error.code != 404:
+                raise
 
 
 class Aperture:

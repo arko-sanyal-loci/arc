@@ -46,6 +46,8 @@ The MCP client discovered the four tools and verified isolated scratchpad writes
 
 ## Writing and voice
 
+See [full-duplex voice research](VOICE-RESEARCH.md) for the local shortlist and interruption benchmark.
+
 The `calendar_chat` tool accepts recent turns from its client. The `calendar_write` tool accepts an audience and returns Markdown for review in the client, with lists and language-tagged code blocks when requested. It does not run commands contained in a draft.
 
 For local full-duplex speech, NVIDIA PersonaPlex is a candidate. It receives and generates audio concurrently. The checkpoint requires Hugging Face access and acceptance of the model terms. The workstation request was denied without authentication. The RTX 5060 Ti had 16,311 MiB total and 4,980 MiB free during this check. NVIDIA documents CPU offload, but this workstation's overlap and interruption latency have yet to be measured. The voice engine and the LOCI tools would need a separate bridge before a live voice session could call LOCI. [PersonaPlex runtime](https://github.com/NVIDIA/personaplex) and [model access](https://huggingface.co/nvidia/personaplex-7b-v1).
