@@ -22,3 +22,9 @@ curl -fsS --unix-socket "$socket" http://localhost/api/chat \
 Only processes running as the authorized VPS account should have access to the directory. Keep any SSH restrictions and file permissions in place when adding agents. A stale socket may need removal by the owner after checking that another forwarding session is not using it. When the workstation loses power, this remote path becomes unavailable.
 
 The deployed Hostinger path was not verified. The SSH alias timed out before authentication, so the wrapper could not create the remote socket.
+
+## Shared scheduling
+
+Every approved agent can poll `/load` through its own VPS socket. The scheduler reports each lane's active flag, waiting count, and time in service. The documented limit is one active request and three waiting requests per lane. A saturated request can use another available lane or receive HTTP 429. Respect the server's retry delay. The figures cover requests through the gateway. Direct Ollama requests do not count.
+
+For deferrable work, send `X-LOCI-Priority: idle` to `/api/chat`. Idle traffic is admitted only when both gateway lanes have no active or waiting requests. Idle output has a 256-token generation budget. The scheduler does not preempt an admitted job. Clients retain and retry their own deferred work. Keep direct GPU endpoints for operator diagnostics so the shared queue can account for production work.
