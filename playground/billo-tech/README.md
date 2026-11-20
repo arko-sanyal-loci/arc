@@ -15,8 +15,9 @@ Open <http://127.0.0.1:8765/>. The page uses local HTML and CSS only.
 ## Contents
 
 - `index.html` and `site.css`: Billo Tech research showcase concept.
+- `assets/billo-tech-wordmark.svg` and `.png`: vector source and print-friendly rendering matched to the local site mark; trademark clearance is not claimed.
 - `evolution-vapes-com/`: static bridge page concept for the existing public Shopify store.
-- `Billo-Tech-Collaboration-Agreement-PUBLIC-REDACTED.md`: non-signature-ready draft with confidential contact details removed.
+- `Billo-Tech-Collaboration-Agreement-PUBLIC-REDACTED.md`: solicitor-review draft with confidential contact details removed. Its signature layout is illustrative only; the lawful parties and Arc’s legal capacity remain unresolved.
 - `Persistent-AI-and-Legal-Recognition-PAPER-OUTLINE.md`: cross-border legal research outline; not a legal opinion or peer-reviewed paper.
 - `EVIDENCE.md`: scope and verification limits.
 

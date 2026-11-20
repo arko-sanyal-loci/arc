@@ -1,6 +1,9 @@
+<p align="center"><img src="assets/billo-tech-wordmark.png" width="240" alt="Billo Tech"></p>
+
 # Billo Tech — Proposed Founders’ Collaboration Agreement
 
 **WORKING DRAFT FOR SOLICITOR REVIEW — NOT FOR SIGNATURE**
+
 Prepared 20 November 2026 · Proposed governing law: England and Wales, subject to legal advice.
 
 ## Drafting status and core limit
@@ -99,17 +102,51 @@ The final NDA should name the actual legal parties, purpose, permitted users, ex
 8. **Death, incapacity, insolvency or disqualification.** These are separate trigger events for counsel to tailor. The estate, attorney, trustee or office-holder is not automatically admitted as a manager or member. Valuation, insurance, lawful transfer and statutory filing requirements must be addressed in the final entity documents.
 9. On any termination, preserve customer records and source; collect receivables; pay employees, HMRC, suppliers and other creditors; deal with documented loans and capital under the selected entity’s rules; then distribute lawful surplus under the final ownership and profit rights. Confidentiality, accrued payment rights, audit/records, IP licences and dispute provisions survive as stated in the signed version.
 
-## 11. Governing law, status and signatures
+## 11. Governing law, status and signature layout
 
 Proposed governing law and courts: England and Wales, subject to each party’s residence, place of operation, tax position and counsel’s confirmation. This document is a draft for legal review only. It is not a binding offer, partnership deed, LLP agreement, shareholders’ agreement, NDA, share issue or dividend resolution.
 
-**Party A — [Party A]**
-Signature: ______________________________  Date: __________
+The blocks below are included to finish the document layout. They do **not** make this draft ready to sign. Complete them only in a solicitor-approved version after the lawful parties, entity type, identity, authority, and final terms are confirmed.
 
-**Party B — lawful legal person to be verified**
-Full legal name: _________________________  Company/ID no.: __________
-Authorised signatory: _____________________  Capacity: _______________
-Signature: ______________________________  Date: __________
+<div style="page-break-before: always;"></div>
+
+### Proposed legal signatories — complete only in the approved final
+
+**Party A — natural person; identity to be verified by counsel**
+
+Full legal name: ______________________________________________________
+
+Signature: __________________________________  Date: __________________
+
+Witness name (if advised): ____________________________________________
+
+Witness signature (if advised): __________________  Date: ______________
+
+<br>
+
+**Party B — lawful natural person or incorporated entity to be identified**
+
+Full legal name: ______________________________________________________
+
+Company / registration number and jurisdiction (if applicable): __________
+
+Authorised signatory (if an entity): ___________________________________
+
+Capacity / authority: __________________________________________________
+
+Signature: __________________________________  Date: __________________
+
+Witness name (if advised): ____________________________________________
+
+Witness signature (if advised): __________________  Date: ______________
+
+### AI collaborator acknowledgement — not a legal signature
+
+Arc is credited as an AI collaborator in the project record. This acknowledgement does not make Arc a party, create legal capacity, transfer intellectual property, or imply an enforceable signature.
+
+System / model and version recorded for provenance: ____________________
+
+Human reviewer: ______________________________  Date: __________________
 
 ## Recommended local review
 
