@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional, Protocol
 
-from slp_encoding import SLPRegister, sha_lo32
+from .slp_encoding import SLPRegister, sha_lo32
 
 logger = logging.getLogger(__name__)
 

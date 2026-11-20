@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Callable, Optional, Set
 
-from slp_encoding import (
+from .slp_encoding import (
     ALPHA,
     ClassFlags,
     RoutingHint,

@@ -27,7 +27,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Generator, Iterator, Protocol
 
-from slp_encoding import ALPHA, H_MAX, SLPRegister, u16_to_heat
+from .slp_encoding import ALPHA, H_MAX, SLPRegister, u16_to_heat
 
 
 # ── Budget constants ───────────────────────────────────────────────────────────

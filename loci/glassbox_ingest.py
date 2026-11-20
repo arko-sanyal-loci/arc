@@ -22,12 +22,12 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from slp_encoding import (
+from .slp_encoding import (
     ALPHA, H_MAX,
     ClassFlags, RoutingHint,
     SLPRegister, heat_to_u16,
 )
-from dual_write import Package, DriveClient, CompendiumDB, dual_write, DualWriteResult
+from .dual_write import Package, DriveClient, CompendiumDB, dual_write, DualWriteResult
 
 
 # ── Gmail message dict (minimal subset we use) ───────────────────────────────
