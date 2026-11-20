@@ -1,0 +1,160 @@
+/* arc-ui.css — Arc ambient UI: motion field, tier stream, interaction tokens */
+
+/* ── Design tokens ────────────────────────────────────────────────────────── */
+:root {
+  --ease-float: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-drift: cubic-bezier(0.42, 0.00, 0.58, 1.00);
+  --ease-buoy:  cubic-bezier(0.34, 1.56, 0.64, 1.00);
+
+  --t-touch: 140ms;
+  --t-float: 560ms;
+  --t-drift: 2400ms;
+
+  --tier-hot:  #ffb35c;
+  --tier-mild: #9f6cff;
+  --tier-cold: #5cc8ff;
+}
+
+/* ── Particle field canvas ────────────────────────────────────────────────── */
+#arc-field {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #arc-field { display: none; }
+}
+
+/* ── arc-rise keyframe ────────────────────────────────────────────────────── */
+@keyframes arc-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1.00); }
+}
+.arc-rise {
+  animation: arc-rise var(--t-float) var(--ease-buoy) both;
+}
+
+/* ── arc-breathe (streaming bubble pulse) ────────────────────────────────── */
+@keyframes arc-breathe {
+  0%, 100% { box-shadow: 0 0 0 0   rgba(108,108,255,0); }
+  50%       { box-shadow: 0 0 0 6px rgba(108,108,255,0.18); }
+}
+.arc-breathe {
+  animation: arc-breathe 1.4s var(--ease-drift) infinite;
+}
+
+/* ── Tier stream sidebar section ─────────────────────────────────────────── */
+.tier-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.tier-lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.tier-label {
+  min-width: 36px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.tier-track {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.tier-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s var(--ease-float);
+}
+
+.tier-pct {
+  min-width: 28px;
+  text-align: right;
+  font-family: var(--mono);
+}
+
+/* ── Sound toggle ─────────────────────────────────────────────────────────── */
+#sound-toggle {
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: background var(--t-touch), border-color var(--t-touch), color var(--t-touch);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#sound-toggle:hover { background: var(--border); color: var(--text); }
+#sound-toggle.active { border-color: var(--accent); color: var(--accent); }
+
+/* ── VRAM bar shimmer during active streaming ─────────────────────────────── */
+@keyframes arc-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.vram-fill.shimmer {
+  background: linear-gradient(90deg,
+    var(--accent)  0%,
+    #c0c0ff       40%,
+    var(--accent) 60%,
+    var(--accent) 100%
+  );
+  background-size: 200% auto;
+  animation: arc-shimmer 1.6s linear infinite;
+}
+
+/* ── Ollama model selector ───────────────────────────────────────────────── */
+#ollama-model-select {
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--t-touch);
+  max-width: 200px;
+}
+#ollama-model-select:focus { border-color: var(--accent); }
+
+/* ── Benchmark panel ─────────────────────────────────────────────────────── */
+.bench-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  font-size: 12px;
+}
+.bench-row:last-child { border-bottom: none; }
+.bench-provider { font-family: var(--mono); font-size: 11px; color: var(--text-dim); flex: 1; }
+.bench-toks { font-family: var(--mono); font-weight: 600; color: var(--tier-hot); min-width: 72px; text-align: right; }
+.bench-toks.mid { color: var(--tier-mild); }
+.bench-toks.low { color: var(--tier-cold); }
+.bench-err  { color: var(--red); font-size: 11px; }
