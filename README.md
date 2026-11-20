@@ -18,7 +18,7 @@ It runs your model locally with persistent memory, dynamic GPU offloading, and a
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square)](https://fastapi.tiangolo.com)
-[![License: all rights reserved](https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey?style=flat-square)](LICENSE.md)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE.md)
 [![Billo Tech](https://img.shields.io/badge/Billo%20Tech-arc-6c6cff?style=flat-square)](https://billo.tech)
 
 </div>
@@ -154,8 +154,9 @@ Arc maps every Loci SLP node to a storage tier by its heat value `H ∈ [0, 1]`:
 | **DDR5** | 0.35 ≤ H < 0.80 | 32 GB DDR5-5200 | Recent context — µs latency |
 | **NVMe** | H < 0.35 | SSD | Cold history — ms latency, unlimited depth |
 
-`core/tiered_memory.heat_to_tier()` classifies at 0.80 today. The sweep-optimal admission value
-0.70 (`VRAM_ADMISSION_THRESHOLD`) is defined but not yet used; that choice is open.
+`core/tiered_memory.heat_to_tier()` still classifies at 0.80. The engine moved its HOT boundary
+to 0.70 on 2026-11-20 (LOCI-MEMORY-ENGINE `docs/decisions/0001-hot-threshold-0.70.md`); Arc
+has not followed yet.
 
 Heat increases on access and decays over time (`DECAY_GAMMA = 0.98` per tick).  
 Nodes are promoted and demoted automatically every 50 heartbeat ticks.
@@ -240,4 +241,4 @@ Loci Memory Engine   ←── Arc Runtime  ←── Chat UI  │
 
 ## License
 
-© 2026 [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci). All rights reserved; the source is public to read, not licensed for reuse. See [LICENSE.md](LICENSE.md).
+MIT © 2026 [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci). See [LICENSE.md](LICENSE.md), same license as the engine.
