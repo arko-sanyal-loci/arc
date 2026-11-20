@@ -1,5 +1,13 @@
 # Full-duplex voice for Mr Calendar
 
+## Natural timing, expressive speech, and room sound
+
+The GPT-4o launch described its audio-native model as able to retain vocal tone and produce laughter, singing, and emotional expression, capabilities a separate transcription → text model → TTS chain loses. The demo suggests the right direction for Mira Murati's natural pauses and laughter: an audio-native speech model, rather than fixed silences or a prerecorded laugh inserted into ordinary TTS. Current Realtime prompting guidance steers pacing, voice, and emotion, but instructions do not guarantee a specific sound on every response. See [Hello GPT-4o](https://openai.com/index/hello-gpt-4o/), [Realtime voice prompting](https://developers.openai.com/api/docs/guides/voice-prompting), and [Realtime API](https://developers.openai.com/api/docs/guides/realtime-conversations).
+
+The workstation's available Piper command is one-way text-to-speech. It cannot listen during playback, decide conversationally when to yield, or produce reliably natural laughter. A local `--room small-office` option was added to the Mr Calendar CLI as an optional simulated early-reflection / short-tail effect. It is deliberately off by default and is not yet attached to an Arc full-duplex service or a physically measured room profile. Keep the Arc voice cleanly attributable to its selected model; do not splice in a person's laugh or imitate a specific speaker. A real Arc voice integration should use a licensed/consented voice model, native audio turn-taking, and an opt-in room profile with a dry bypass.
+
+For dynamic pauses, the voice runtime should jointly manage listening, barge-in, turn-end detection, and speech continuation. Pause lengths should follow the user's turn and generated prosody, rather than a fixed delay inserted into every sentence. Evaluate naturalness with consenting listeners and a named protocol; do not claim human-like timing based on the synthetic reverb prototype.
+
 Research recorded on 2026-11-20 Asia/Dhaka. Arko Sanyal defined the goal of a local conversation that can hear interruptions, speak naturally, and reach shared LOCI tools. Codex compared the runtimes and checked local prerequisites.
 
 ## Shortlist
