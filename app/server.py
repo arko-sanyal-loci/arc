@@ -2,14 +2,18 @@
 app/server.py — Arc interaction server
 
 FastAPI + WebSocket backend:
-  GET  /                     → serves index.html
-  GET  /api/status           → engine status (heartbeat, GPU, API health)
-  POST /api/chat             → single-turn completion (JSON)
-  WS   /ws/chat              → streaming chat (WebSocket)
-  GET  /api/memory/search    → Loci memory search
-  POST /api/memory/ingest    → ingest a document into Loci
-  GET  /api/health           → provider health (xAI + nexos + local)
-  POST /mcp                  → MCP protocol endpoint (tool calls)
+  GET  /                       → serves index.html
+  GET  /api/status             → engine status (heartbeat, GPU, API health)
+  POST /api/chat               → single-turn completion (JSON)
+  WS   /ws/chat                → streaming chat (WebSocket)
+  GET  /api/models             → Ollama model list (native /api/tags)
+  GET  /api/benchmark          → tok/s benchmark: native vs compat path
+  GET  /api/memory/search      → Loci memory search
+  POST /api/memory/ingest      → ingest a document into Loci
+  GET  /api/health             → provider health (xAI + nexos + local)
+  GET  /api/calendar           → CalendarMemoryStore hot entries
+  POST /api/calendar/touch     → touch a calendar entry (heat bump)
+  POST /mcp                    → MCP protocol endpoint (tool calls)
 
 MCP compatibility:
   Implements a subset of the Model Context Protocol server spec.
@@ -25,6 +29,7 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
@@ -40,6 +45,8 @@ from core.engine_sync    import EngineSync
 from core.gpu_offload    import GPUOffloadManager, query_vram, LANE_RTX as _LANE_RTX, LANE_ARC as _LANE_ARC
 from core.api_provision  import APIProvisioner, CompletionRequest, ChatMessage, Provider
 from core.tiered_memory  import TieredMemoryManager, plan_migrations
+from core.ollama_client  import OllamaClient
+from core.calendar_memory import CalendarMemoryStore
 
 
 # ── Global state (initialised in lifespan) ────────────────────────────────────
@@ -49,6 +56,8 @@ engine_sync:  EngineSync | None           = None
 gpu_manager:  GPUOffloadManager | None    = None
 tier_manager: TieredMemoryManager | None  = None
 provisioner:  APIProvisioner | None       = None
+ollama:       OllamaClient | None         = None
+calendar:     CalendarMemoryStore | None  = None
 _hb_task:     asyncio.Task | None         = None
 
 
@@ -56,7 +65,8 @@ _hb_task:     asyncio.Task | None         = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # noqa: ANN001
-    global heartbeat, engine_sync, gpu_manager, tier_manager, provisioner, _hb_task
+    global heartbeat, engine_sync, gpu_manager, tier_manager, provisioner
+    global ollama, calendar, _hb_task
 
     # Heartbeat
     heartbeat = HeartbeatEngine()
@@ -76,11 +86,9 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
     tier_manager = TieredMemoryManager()
 
     async def _tier_sync(tick_id: int) -> None:
-        """Run SLP heat-driven tier migration plan on every heartbeat sync cycle."""
         if tier_manager is not None:
             migration = plan_migrations(tier_manager)
             if migration.promotions or migration.demotions:
-                # Log summary; actual DMA transfer driven by gpu_offload.py
                 total = len(migration.promotions) + len(migration.demotions)
                 print(
                     f"[tier_sync] tick={tick_id}"
@@ -95,6 +103,12 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
     # API provisioner
     provisioner = APIProvisioner.from_config()
     await provisioner.start()
+
+    # Native Ollama client (wraps localhost:11434/api/*)
+    ollama = OllamaClient()
+
+    # Calendar memory (time-indexed with hyperbolic heat decay)
+    calendar = CalendarMemoryStore(namespace="arc_calendar")
 
     # Start heartbeat in background
     _hb_task = asyncio.create_task(heartbeat.run())
@@ -121,7 +135,7 @@ async def lifespan(app: FastAPI):  # noqa: ANN001
 app = FastAPI(
     title="Arc",
     description="Arc — Loci-powered local AI with dynamic GPU offloading",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -153,14 +167,12 @@ async def status():
     rtx   = query_vram(_LANE_RTX)
     arc   = query_vram(_LANE_ARC)
 
-    # Read shm status files
-    hb_status = {}
+    hb_status: dict = {}
     try:
         hb_status = json.loads(Path("/dev/shm/arc_status.json").read_text())
     except (OSError, json.JSONDecodeError):
         pass
 
-    # Tier stats (read shm snapshot — zero-copy)
     tier_snapshot: dict = {}
     try:
         tier_snapshot = json.loads(Path("/dev/shm/arc_tier_state.json").read_text())
@@ -168,13 +180,13 @@ async def status():
         pass
 
     return {
-        "timestamp":       time.time(),
-        "heartbeat":       hb_status,
+        "timestamp":    time.time(),
+        "heartbeat":    hb_status,
         "engine": {
-            "tick_id":         getattr(state, "tick_id", 0),
-            "node_count":      getattr(state, "loci_node_count", 0),
-            "ledger_rows":     getattr(state, "loci_ledger_rows", 0),
-            "drift_detected":  getattr(state, "drift_detected", False),
+            "tick_id":        getattr(state, "tick_id", 0),
+            "node_count":     getattr(state, "loci_node_count", 0),
+            "ledger_rows":    getattr(state, "loci_ledger_rows", 0),
+            "drift_detected": getattr(state, "drift_detected", False),
         },
         "gpu": {
             "rtx": {
@@ -209,10 +221,81 @@ async def health():
     }
 
 
+# ── Ollama model list ─────────────────────────────────────────────────────────
+
+@app.get("/api/models")
+async def models():
+    """List locally available Ollama models via native /api/tags."""
+    if not ollama:
+        return {"models": [], "error": "ollama client not ready"}
+    try:
+        model_list = await ollama.list_models()
+        return {
+            "models": [
+                {
+                    "name":     m.name,
+                    "size_gb":  m.size_gb,
+                    "quant":    m.quant,
+                    "modified": m.modified,
+                }
+                for m in model_list
+            ]
+        }
+    except Exception as exc:
+        return {"models": [], "error": str(exc)}
+
+
+# ── Benchmark ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/benchmark")
+async def benchmark(
+    prompt: str = "Explain what a Loci memory engine does in three sentences.",
+    model: str | None = None,
+    max_tokens: int = 150,
+):
+    """
+    Run tok/s benchmark: native Ollama path (accurate eval_duration) vs
+    OpenAI-compat path (wall-clock). Returns sorted results.
+
+    Hardware reference (design targets):
+      RTX 5060 Ti 16 GB GDDR7  (448 GB/s): ~90-100 tok/s for 7B Q4
+      Arc Pro B70  32 GB GDDR6 (608 GB/s): ~25-30  tok/s for 32B Q4
+      Remote (nexos / xAI):                ~20-50  tok/s + network
+    """
+    if not ollama:
+        return {"results": [], "error": "ollama client not ready"}
+    try:
+        results = await ollama.benchmark(
+            prompt=prompt,
+            model=model or None,
+            max_tokens=max_tokens,
+        )
+        return {
+            "results": [
+                {
+                    "provider":    r.provider,
+                    "model":       r.model,
+                    "tok_per_sec": r.tok_per_sec,
+                    "total_tokens": r.total_tokens,
+                    "latency_ms":  r.latency_ms,
+                    "error":       r.error,
+                }
+                for r in results
+            ],
+            "hardware_reference": {
+                "rtx_5060_ti_7b_q4":  "90-100 tok/s",
+                "arc_b70_32b_q4":     "25-30 tok/s",
+                "remote_nexos_xai":   "20-50 tok/s (+ network)",
+            },
+        }
+    except Exception as exc:
+        return {"results": [], "error": str(exc)}
+
+
 # ── Chat (REST) ───────────────────────────────────────────────────────────────
 
 class ChatRequest(BaseModel):
-    messages:    list[dict]           # [{role, content}]
+    messages:    list[dict]
     model:       str | None = None
     provider:    str = "LOCAL"
     max_tokens:  int = 1024
@@ -342,6 +425,47 @@ async def memory_ingest(req: IngestRequest):
         return JSONResponse({"error": str(exc)}, status_code=500)
 
 
+# ── Calendar memory routes ────────────────────────────────────────────────────
+
+@app.get("/api/calendar")
+async def calendar_hot(threshold: float = 0.6, n: int = 20):
+    """Return hot calendar entries (heat >= threshold)."""
+    if not calendar:
+        return {"entries": [], "error": "calendar not ready"}
+    entries = calendar.recent(n=n, threshold=threshold)
+    return {
+        "entries": [
+            {
+                "id":             e.id,
+                "item_type":      e.item_type,
+                "canonical_text": e.canonical_text,
+                "era":            e.era,
+                "heat":           round(e.heat, 4),
+                "valid_from":     e.valid_from,
+                "valid_until":    e.valid_until,
+            }
+            for e in entries
+        ]
+    }
+
+
+class CalendarTouchRequest(BaseModel):
+    entry_id:   str
+    relevance:  float = 1.0
+    hop_weight: float = 1.0
+
+
+@app.post("/api/calendar/touch")
+async def calendar_touch(req: CalendarTouchRequest):
+    if not calendar:
+        return JSONResponse({"error": "calendar not ready"}, status_code=503)
+    try:
+        calendar.touch(req.entry_id, relevance=req.relevance, hop_weight=req.hop_weight)
+        return {"status": "touched", "entry_id": req.entry_id}
+    except KeyError:
+        return JSONResponse({"error": "entry not found"}, status_code=404)
+
+
 # ── MCP endpoint ──────────────────────────────────────────────────────────────
 
 MCP_TOOLS = [
@@ -374,6 +498,16 @@ MCP_TOOLS = [
         "description": "Get Arc engine status (heartbeat, GPU, memory)",
         "inputSchema": {"type": "object", "properties": {}},
     },
+    {
+        "name":        "arc_benchmark",
+        "description": "Run tok/s benchmark for LOCAL Ollama vs remote providers",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string"},
+            },
+        },
+    },
 ]
 
 
@@ -403,6 +537,10 @@ async def mcp_endpoint(request: Request):
                 provider=args.get("provider", "LOCAL"),
             )
             r = await chat(chat_req)
+            return {"content": [{"type": "text", "text": json.dumps(r)}]}
+
+        if tool == "arc_benchmark":
+            r = await benchmark(model=args.get("model"))
             return {"content": [{"type": "text", "text": json.dumps(r)}]}
 
     return JSONResponse({"error": f"unknown MCP method: {method}"}, status_code=400)

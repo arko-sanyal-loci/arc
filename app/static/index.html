@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Arc</title>
+<link rel="stylesheet" href="/static/arc-ui.css">
 <style>
   :root {
     --bg:         #0f0f10;
@@ -58,23 +59,24 @@
     overflow: hidden; text-overflow: ellipsis;
   }
   .history-item:hover { background: var(--surface2); color: var(--text); }
+  #tier-stream-section { flex-shrink: 0; }
   #status-bar {
     padding: 12px 14px; border-top: 1px solid var(--border); font-size: 11px;
     color: var(--text-dim); display: flex; flex-direction: column; gap: 5px;
   }
   .status-row { display: flex; justify-content: space-between; align-items: center; }
   .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-  .dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
   .dot.yellow { background: var(--yellow); }
-  .dot.red { background: var(--red); }
-  .vram-bar { height: 3px; background: var(--border); border-radius: 2px; flex: 1; margin-left: 8px; overflow: hidden; }
+  .dot.red    { background: var(--red); }
+  .vram-bar  { height: 3px; background: var(--border); border-radius: 2px; flex: 1; margin-left: 8px; overflow: hidden; }
   .vram-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s; }
 
   /* ── Main chat area ── */
   #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   #chat-header {
     padding: 14px 24px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
   }
   #model-selector {
     padding: 6px 12px; background: var(--surface2); border: 1px solid var(--border);
@@ -94,17 +96,14 @@
   .avatar.arc  { background: linear-gradient(135deg, var(--accent), #9f6cff); color: #fff; }
   .avatar.user { background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); }
   .bubble {
-    padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.65;
-    max-width: 640px;
+    padding: 12px 16px; border-radius: 12px; font-size: 14px; line-height: 1.65; max-width: 640px;
   }
   .bubble.arc  { background: var(--surface); border: 1px solid var(--border); }
   .bubble.user { background: var(--accent-dim); border: 1px solid var(--accent); color: var(--text); }
   .bubble pre  { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 12px; overflow-x: auto; margin: 10px 0; }
   .bubble code { font-family: var(--mono); font-size: 13px; }
   .bubble p:not(:last-child) { margin-bottom: 8px; }
-  .bubble.streaming::after {
-    content: "▍"; animation: blink 1s step-end infinite; color: var(--accent);
-  }
+  .bubble.streaming::after { content: "▍"; animation: blink 1s step-end infinite; color: var(--accent); }
   @keyframes blink { 50% { opacity: 0; } }
   .meta { font-size: 11px; color: var(--text-dim); margin-top: 5px; padding: 0 2px; }
 
@@ -126,14 +125,13 @@
   }
   #message-input::placeholder { color: var(--text-dim); }
   #send-btn {
-    width: 34px; height: 34px; border-radius: 9px;
-    background: var(--accent); border: none; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 9px; background: var(--accent);
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
     color: #fff; flex-shrink: 0; transition: background 0.15s, opacity 0.15s;
   }
   #send-btn:hover { background: #8080ff; }
   #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .input-hints { display: flex; gap: 8px; padding: 0 2px; }
+  .input-hints { display: flex; gap: 8px; padding: 0 2px; flex-wrap: wrap; }
   .hint-chip {
     padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border);
     border-radius: 20px; font-size: 11px; color: var(--text-dim); cursor: pointer;
@@ -178,9 +176,18 @@
   .provider-badge.local  { background: #1a2e1a; color: var(--green); }
   .provider-badge.nexos  { background: #1a1a2e; color: var(--accent); }
   .provider-badge.xai    { background: #2e1a1a; color: #ff9f0a; }
+
+  /* ── Tok/s badge ── */
+  .toks-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px;
+    font-family: var(--mono); margin-left: 6px; background: var(--surface2); color: var(--tier-hot);
+  }
 </style>
 </head>
 <body>
+<!-- Particle field canvas -->
+<canvas id="arc-field"></canvas>
+
 <div id="app">
   <!-- Sidebar -->
   <aside id="sidebar">
@@ -195,6 +202,8 @@
       New conversation
     </button>
     <div id="history"></div>
+    <!-- Tier stream -->
+    <div id="tier-stream-section"></div>
     <div id="status-bar">
       <div class="status-row">
         <span><span class="dot" id="hb-dot"></span>Heartbeat</span>
@@ -226,15 +235,22 @@
   <main id="main">
     <div id="chat-header">
       <span style="font-size:14px;color:var(--text-dim)" id="chat-title">Arc</span>
-      <div id="model-selector" onclick="cycleProvider()">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/>
-          <path d="M6 1v5l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        <span id="model-label">Local</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <!-- Ollama model picker (populated from /api/models) -->
+        <select id="ollama-model-select" onchange="onModelChange(this.value)" title="Ollama model">
+          <option value="">Loading models…</option>
+        </select>
+        <div id="model-selector" onclick="cycleProvider()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M6 1v5l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span id="model-label">Local</span>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <button id="sound-toggle" onclick="toggleSound()" title="Toggle audio cues">🔇 Sound</button>
       </div>
     </div>
 
@@ -254,10 +270,10 @@
             <div>GPU status</div>
             <div class="s-text">Show me GPU utilisation</div>
           </div>
-          <div class="suggestion-card" onclick="suggest('Search memory for recent context')">
-            <div class="s-icon">🔍</div>
-            <div>Search memory</div>
-            <div class="s-text">Search memory for recent context</div>
+          <div class="suggestion-card" onclick="suggest('@benchmark')">
+            <div class="s-icon">📊</div>
+            <div>Benchmark</div>
+            <div class="s-text">Run tok/s benchmark</div>
           </div>
           <div class="suggestion-card" onclick="suggest('Run a quick self-test')">
             <div class="s-icon">🧪</div>
@@ -272,6 +288,7 @@
       <div class="input-hints">
         <span class="hint-chip" onclick="suggest('@memory search...')">@memory</span>
         <span class="hint-chip" onclick="suggest('@status')">@status</span>
+        <span class="hint-chip" onclick="suggest('@benchmark')">@benchmark</span>
         <span class="hint-chip" onclick="suggest('@ingest ')">@ingest</span>
         <span class="hint-chip" onclick="cycleProvider()">Switch provider</span>
       </div>
@@ -288,16 +305,80 @@
   </main>
 </div>
 
+<script src="/static/arc-motion.js"></script>
+<script src="/static/arc-sound.js"></script>
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-const PROVIDERS = ['LOCAL', 'NEXOS', 'XAI'];
+const PROVIDERS       = ['LOCAL', 'NEXOS', 'XAI'];
 const PROVIDER_LABELS = { LOCAL: 'Local', NEXOS: 'nexos.ai', XAI: 'xAI Grok' };
 let currentProvider = 0;
-let ws = null;
-let isStreaming = false;
-let conversations = [];
-let currentConvId = null;
-let statusInterval = null;
+let selectedModel   = '';
+let ws = null, isStreaming = false, statusInterval = null;
+
+// ── Motion + Sound init ────────────────────────────────────────────────────
+const _field      = ArcMotion.createField(document.getElementById('arc-field'));
+const _tierStream = ArcMotion.createTierStream(document.getElementById('tier-stream-section'));
+if (_field && !ArcMotion.REDUCED) _field.start();
+
+function onReplyStart() {
+  document.querySelector('.bubble.streaming')?.classList.add('arc-breathe');
+  setBar('rtx-bar', null, true);
+  ArcSound.play('lift');
+}
+
+function onReplyChunk(el) {
+  ArcSound.play('tick');
+}
+
+function onReplyDone(el) {
+  el?.classList.remove('arc-breathe');
+  setBar('rtx-bar', null, false);
+  ArcSound.play('arrive');
+}
+
+function onReplyError() {
+  setBar('rtx-bar', null, false);
+  ArcSound.play('fault');
+}
+
+function setBar(id, pct, shimmer) {
+  const fill = document.getElementById(id);
+  if (!fill) return;
+  if (pct !== null) fill.style.width = pct + '%';
+  if (shimmer === true)  fill.classList.add('shimmer');
+  if (shimmer === false) fill.classList.remove('shimmer');
+}
+
+function toggleSound() {
+  const on = ArcSound.toggle();
+  const btn = document.getElementById('sound-toggle');
+  btn.textContent = on ? '🔊 Sound' : '🔇 Sound';
+  btn.classList.toggle('active', on);
+}
+
+// ── Ollama model list ──────────────────────────────────────────────────────
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models');
+    const data = await r.json();
+    const sel = document.getElementById('ollama-model-select');
+    const models = data.models || [];
+    if (!models.length) {
+      sel.innerHTML = '<option value="">No models found</option>';
+      return;
+    }
+    sel.innerHTML = models.map(m =>
+      `<option value="${m.name}">${m.name} (${m.size_gb}GB ${m.quant})</option>`
+    ).join('');
+    selectedModel = models[0].name;
+  } catch (_) {
+    document.getElementById('ollama-model-select').innerHTML =
+      '<option value="">Ollama offline</option>';
+  }
+}
+loadModels();
+
+function onModelChange(val) { selectedModel = val; }
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
 function connectWS() {
@@ -309,9 +390,8 @@ function connectWS() {
 }
 connectWS();
 
-// ── Send ───────────────────────────────────────────────────────────────────
-let streamBuffer = '';
-let streamEl = null;
+// ── Streaming ──────────────────────────────────────────────────────────────
+let streamBuffer = '', streamEl = null;
 
 function handleWSMessage(event) {
   const data = JSON.parse(event.data);
@@ -320,14 +400,18 @@ function handleWSMessage(event) {
     streamEl = addBubble('arc', '', true);
     document.getElementById('send-btn').disabled = true;
     isStreaming = true;
+    onReplyStart();
   } else if (data.type === 'chunk') {
     streamBuffer += data.content;
     if (streamEl) streamEl.innerHTML = renderMarkdown(streamBuffer);
     scrollToBottom();
+    onReplyChunk(streamEl);
   } else if (data.type === 'done') {
     if (streamEl) {
       streamEl.classList.remove('streaming');
-      addMeta(streamEl.closest('.message'), PROVIDERS[currentProvider]);
+      const toks = data.tok_per_sec;
+      addMeta(streamEl.closest('.message'), PROVIDERS[currentProvider], toks);
+      onReplyDone(streamEl);
     }
     document.getElementById('send-btn').disabled = false;
     isStreaming = false;
@@ -336,6 +420,7 @@ function handleWSMessage(event) {
     if (streamEl) streamEl.innerHTML = `<span style="color:var(--red)">${data.error}</span>`;
     document.getElementById('send-btn').disabled = false;
     isStreaming = false;
+    onReplyError();
   }
 }
 
@@ -349,109 +434,117 @@ function sendMessage() {
   input.value = '';
   autoResize(input);
 
-  // Handle special commands
-  if (text.startsWith('@status')) { fetchStatus(); return; }
+  if (text === '@status') { fetchStatus(); return; }
+  if (text === '@benchmark') { fetchBenchmark(); return; }
   if (text.startsWith('@memory search')) {
-    const q = text.replace('@memory search', '').trim();
-    fetchMemorySearch(q);
-    return;
+    fetchMemorySearch(text.replace('@memory search', '').trim()); return;
   }
   if (text.startsWith('@ingest ')) {
-    const content = text.replace('@ingest ', '');
-    fetchIngest(content);
-    return;
+    fetchIngest(text.replace('@ingest ', '')); return;
   }
 
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    fallbackFetch(text);
-    return;
-  }
+  if (!ws || ws.readyState !== WebSocket.OPEN) { fallbackFetch(text); return; }
 
-  const messages = buildMessages(text);
   ws.send(JSON.stringify({
-    messages,
+    messages: buildMessages(text),
     provider: PROVIDERS[currentProvider],
+    model: selectedModel || undefined,
     max_tokens: 1024,
     temperature: 0.7,
   }));
 }
 
 function fallbackFetch(text) {
-  const messages = buildMessages(text);
   const el = addBubble('arc', '', true);
   document.getElementById('send-btn').disabled = true;
+  onReplyStart();
 
   fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, provider: PROVIDERS[currentProvider] }),
+    body: JSON.stringify({
+      messages: buildMessages(text),
+      provider: PROVIDERS[currentProvider],
+      model: selectedModel || undefined,
+    }),
   })
   .then(r => r.json())
   .then(data => {
     el.classList.remove('streaming');
     el.innerHTML = renderMarkdown(data.content || data.error || 'No response');
-    addMeta(el.closest('.message'), PROVIDERS[currentProvider]);
+    addMeta(el.closest('.message'), PROVIDERS[currentProvider], data.tok_per_sec);
     document.getElementById('send-btn').disabled = false;
     scrollToBottom();
+    onReplyDone(el);
   })
   .catch(e => {
     el.innerHTML = `<span style="color:var(--red)">${e.message}</span>`;
     el.classList.remove('streaming');
     document.getElementById('send-btn').disabled = false;
+    onReplyError();
   });
 }
 
 // ── Special commands ───────────────────────────────────────────────────────
 function fetchStatus() {
-  fetch('/api/status')
-    .then(r => r.json())
-    .then(data => {
-      const el = addBubble('arc', '');
-      el.innerHTML = `<strong>Arc Engine Status</strong><pre><code>${JSON.stringify(data, null, 2)}</code></pre>`;
-      scrollToBottom();
-    });
+  fetch('/api/status').then(r => r.json()).then(data => {
+    const el = addBubble('arc', '');
+    el.innerHTML = `<strong>Arc Engine Status</strong><pre><code>${JSON.stringify(data, null, 2)}</code></pre>`;
+    scrollToBottom();
+  });
+}
+
+function fetchBenchmark() {
+  const el = addBubble('arc', '<em>Running benchmark…</em>');
+  fetch('/api/benchmark').then(r => r.json()).then(data => {
+    const rows = (data.results || []).map((r, i) => {
+      const cls = r.tok_per_sec > 60 ? '' : r.tok_per_sec > 25 ? ' mid' : ' low';
+      const toks = r.error ? `<span class="bench-err">${r.error}</span>`
+        : `<span class="bench-toks${cls}">${r.tok_per_sec.toFixed(1)} tok/s</span>`;
+      return `<div class="bench-row">
+        <span class="bench-provider">${r.provider}</span>
+        <span style="color:var(--text-dim);font-size:11px;font-family:var(--mono)">${r.model}</span>
+        ${toks}
+        <span style="color:var(--text-dim);font-size:11px;font-family:var(--mono)">${r.latency_ms}ms</span>
+      </div>`;
+    }).join('');
+    el.innerHTML = `<strong>Benchmark Results</strong><div style="margin-top:10px">${rows}</div>`;
+    scrollToBottom();
+  }).catch(e => {
+    el.innerHTML = `<span style="color:var(--red)">Benchmark error: ${e.message}</span>`;
+  });
 }
 
 function fetchMemorySearch(q) {
   fetch(`/api/memory/search?q=${encodeURIComponent(q)}&limit=5`)
-    .then(r => r.json())
-    .then(data => {
+    .then(r => r.json()).then(data => {
       const el = addBubble('arc', '');
       const results = data.results || [];
-      if (!results.length) {
-        el.innerHTML = '<em>No memory nodes matched.</em>';
-      } else {
-        el.innerHTML = `<strong>Memory search: "${q}"</strong><br><br>` +
-          results.map(r =>
+      el.innerHTML = results.length
+        ? `<strong>Memory: "${q}"</strong><br><br>` + results.map(r =>
             `<div style="padding:8px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px">
               <span style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">${r.node_id}</span>
               <span class="provider-badge">${r.category}</span><br>
               <span style="font-size:13px">${r.content}</span>
-             </div>`
-          ).join('');
-      }
+            </div>`).join('')
+        : '<em>No memory nodes matched.</em>';
       scrollToBottom();
     });
 }
 
 function fetchIngest(content) {
   fetch('/api/memory/ingest', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, category: 'STANDARD' }),
-  })
-  .then(r => r.json())
-  .then(data => {
+  }).then(r => r.json()).then(data => {
     const el = addBubble('arc', '');
-    el.innerHTML = `<span style="color:var(--green)">✓ Ingested</span> → node <code>${data.node_id}</code>`;
+    el.innerHTML = `<span style="color:var(--green)">✓ Ingested</span> → <code>${data.node_id}</code>`;
     scrollToBottom();
   });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-function buildMessages(text) {
-  return [{ role: 'user', content: text }];
-}
+function buildMessages(text) { return [{ role: 'user', content: text }]; }
 
 function hideEmpty() {
   const e = document.getElementById('empty-state');
@@ -461,22 +554,22 @@ function hideEmpty() {
 function addBubble(role, text, streaming = false) {
   const container = document.getElementById('messages');
   const msg = document.createElement('div');
-  msg.className = `message ${role}`;
-  const initial = role === 'arc' ? 'A' : '👤';
-  const html = `<div class="avatar ${role}">${initial}</div>
+  msg.className = `message ${role} arc-rise`;
+  msg.innerHTML = `<div class="avatar ${role}">${role === 'arc' ? 'A' : '👤'}</div>
     <div class="bubble ${role}${streaming ? ' streaming' : ''}">${renderMarkdown(text)}</div>`;
-  msg.innerHTML = html;
   container.appendChild(msg);
   scrollToBottom();
   return msg.querySelector('.bubble');
 }
 
-function addMeta(msgEl, provider) {
+function addMeta(msgEl, provider, tokSec) {
+  if (!msgEl) return;
   const meta = document.createElement('div');
   meta.className = 'meta';
   const label = PROVIDER_LABELS[provider] || provider;
   const badgeClass = provider === 'LOCAL' ? 'local' : provider === 'NEXOS' ? 'nexos' : 'xai';
-  meta.innerHTML = `<span class="provider-badge ${badgeClass}">${label}</span>`;
+  const toksBadge = tokSec != null ? `<span class="toks-badge">${parseFloat(tokSec).toFixed(1)} tok/s</span>` : '';
+  meta.innerHTML = `<span class="provider-badge ${badgeClass}">${label}</span>${toksBadge}`;
   msgEl.appendChild(meta);
 }
 
@@ -511,9 +604,7 @@ function autoResize(el) {
 
 function suggest(text) {
   const input = document.getElementById('message-input');
-  input.value = text;
-  input.focus();
-  autoResize(input);
+  input.value = text; input.focus(); autoResize(input);
 }
 
 function cycleProvider() {
@@ -524,55 +615,43 @@ function cycleProvider() {
 function newChat() {
   const container = document.getElementById('messages');
   container.innerHTML = '';
-  const e = document.createElement('div');
-  e.id = 'empty-state';
-  e.innerHTML = document.querySelector('#empty-state')?.innerHTML || '<p>New conversation</p>';
-  container.appendChild(e);
 }
 
 function saveToHistory() {
   const msgs = document.querySelectorAll('.message.user .bubble');
   if (!msgs.length) return;
-  const first = msgs[0].textContent.slice(0, 48) + (msgs[0].textContent.length > 48 ? '…' : '');
+  const first = msgs[msgs.length - 1].textContent.slice(0, 48);
   const item = document.createElement('div');
   item.className = 'history-item';
-  item.textContent = first;
+  item.textContent = first + (first.length >= 48 ? '…' : '');
   document.getElementById('history').prepend(item);
 }
 
 // ── Status polling ─────────────────────────────────────────────────────────
 function pollStatus() {
-  fetch('/api/status')
-    .then(r => r.json())
-    .then(data => {
-      // Heartbeat
-      const tick = data.heartbeat?.tick_id ?? 0;
-      document.getElementById('hb-tick').textContent = tick ? `#${tick}` : '—';
-      const hbDot = document.getElementById('hb-dot');
-      hbDot.className = `dot ${data.heartbeat?.tick_id ? 'green' : 'red'}`;
+  fetch('/api/status').then(r => r.json()).then(data => {
+    const tick = data.heartbeat?.tick_id ?? 0;
+    document.getElementById('hb-tick').textContent = tick ? `#${tick}` : '—';
+    document.getElementById('hb-dot').className = `dot ${tick ? 'green' : 'red'}`;
 
-      // GPU
-      const rtxPct = data.gpu?.rtx?.util_pct ?? 0;
-      const arcPct = data.gpu?.arc?.util_pct ?? 0;
-      document.getElementById('rtx-bar').style.width = rtxPct + '%';
-      document.getElementById('arc-bar').style.width = arcPct + '%';
-      document.getElementById('rtx-pct').textContent = rtxPct + '%';
-      document.getElementById('arc-pct').textContent = arcPct + '%';
-    })
-    .catch(() => {});
+    const rtxPct = data.gpu?.rtx?.util_pct ?? 0;
+    const arcPct = data.gpu?.arc?.util_pct ?? 0;
+    if (!document.getElementById('rtx-bar').classList.contains('shimmer')) {
+      setBar('rtx-bar', rtxPct);
+    }
+    setBar('arc-bar', arcPct);
+    document.getElementById('rtx-pct').textContent = rtxPct + '%';
+    document.getElementById('arc-pct').textContent = arcPct + '%';
 
-  fetch('/api/health')
-    .then(r => r.json())
-    .then(data => {
-      const dot = (name, id) => {
-        const h = data[name] || {};
-        document.getElementById(id).className = `dot ${h.reachable ? 'green' : 'red'}`;
-      };
-      dot('LOCAL', 'local-dot');
-      dot('NEXOS', 'nexos-dot');
-      dot('XAI',   'xai-dot');
-    })
-    .catch(() => {});
+    if (_tierStream) _tierStream.update(data.memory_tiers);
+  }).catch(() => {});
+
+  fetch('/api/health').then(r => r.json()).then(data => {
+    ['LOCAL', 'NEXOS', 'XAI'].forEach(p => {
+      const dot = document.getElementById(`${p.toLowerCase()}-dot`);
+      if (dot) dot.className = `dot ${(data[p] || {}).reachable ? 'green' : 'red'}`;
+    });
+  }).catch(() => {});
 }
 
 pollStatus();
