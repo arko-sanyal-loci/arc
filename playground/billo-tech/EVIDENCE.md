@@ -21,6 +21,13 @@ and no company was incorporated or contract signed.
 - The live `.com` domain currently returns HTTP 200 and is an active Hostinger
   WordPress site, but its page is a generic starter page. The local bridge design
   is not deployed. No WordPress content has been changed.
+- A 22 November 2026 read-only check found one account database using 3 MiB of
+  its 3 GiB allowance. Hostinger's account API reports no database assigned to
+  `evolutionvapes.com`, and does not expose the database's tables or a SQL
+  export. The public WordPress REST API returns one published `Hello world!`
+  starter post and no published pages. This indicates starter WordPress content;
+  it does not prove that the underlying database is empty. No database was
+  deleted or changed.
 - Hostinger's domain record shows `evolutionvapes.com` was registered on
   11 October 2018. Its Hostinger portfolio entry dates to 11 January 2022; that
   later account date does not change the 2018 registration date. Domain tenure
@@ -36,6 +43,24 @@ and no company was incorporated or contract signed.
   files-and-database backup. A current full backup is still required before any
   homepage replacement; Hostinger's documented method is through hPanel and a
   download link sent to the account email.
+
+## Shopify and Loyverse evaluation
+
+- Loyverse lists Shopify integrations in its marketplace. The listed Shopify
+  connector is supplied by SKUPlugs, a separate SaaS provider, and describes
+  catalog, inventory, order, and customer synchronization. Loyverse's own setup
+  guide says marketplace connections redirect to the provider and require the
+  user to grant permissions. This is a marketplace-mediated third-party
+  integration, not built-in synchronization in Shopify or Loyverse core.
+- Shopify's Catalog policy excludes tobacco and vaping products. Bangladesh is
+  not in Shopify's supported-country list for Shopify Payments, so the merchant
+  would need a third-party payment provider. Shopify's ENDS guidance also makes
+  the merchant responsible for complying with local law. These constraints do
+  not establish that a third-party gateway will accept this product category or
+  that local law permits the intended store.
+- No Shopify store was created, no Loyverse app was connected, and no paid
+  integration was activated. Do not migrate the WordPress site or remove its
+  database based on this evaluation.
 
 ## Bangladesh publication constraint
 
@@ -72,3 +97,8 @@ review-only placeholder, not the former store-link concept.
 - [Bangladesh Government Press: official Gazette listing for Act 91 of 2026](https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/61244)
 - [Act 91 of 2026, unofficial English translation of the Gazette](https://assets.tobaccocontrollaws.org/uploads/legislation/Bangladesh/Bangladesh-TC-Amdt.-Act-2026.pdf)
 - [Hostinger: download a website backup](https://www.hostinger.com/support/5981435-how-to-download-backups-at-hostinger/)
+- [Loyverse Marketplace: Shopify by SKUPlugs](https://loyverse.com/marketplace/shopify-skuplugs)
+- [Loyverse: connect apps from the marketplace](https://help.loyverse.com/help/connect-apps-from-marketplace)
+- [Shopify Catalog product requirements](https://help.shopify.com/en/manual/shopify-catalog/requirements)
+- [Shopify Payments supported countries](https://help.shopify.com/en/manual/payments/shopify-payments/supported-countries)
+- [Shopify guidance for ENDS products](https://help.shopify.com/en/manual/compliance/legal/ends)
