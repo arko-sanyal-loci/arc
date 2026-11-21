@@ -35,7 +35,10 @@ incorporated or contract signed.
   adds real keys. A read-only xAI model-list request rejected the previously
   configured value as invalid; a Nexos model-list request returned HTTP 403,
   which does not establish whether its key or the network edge caused the
-  rejection. Neither external inference fallback is verified as usable.
+  rejection. Neither external inference fallback is verified as usable. The
+  health API now separates endpoint reachability from `api_ready`; the local
+  provider is ready, while Nexos and xAI report no configured credentials and
+  `api_ready: false`.
 - The static Billo page does not establish that a Billo company, production
   API, worker, or integrated Billo memory platform exists. Those remain
   outstanding.
