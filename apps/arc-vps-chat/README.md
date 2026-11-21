@@ -42,6 +42,16 @@ those dependencies are unavailable, text chat and telemetry remain available
 and voice transcription reports unavailable rather than sending audio to a
 cloud service.
 
+## Billo Tech public pages
+
+`landing/index.html` and `landing/status.html` are the source for the static
+Billo Tech home page and `/status` page in `/var/www/billo.tech/landing` on the
+VPS. They link to the separately protected Arc chat at `/arko/chat`; the public
+pages do not reveal the authenticated heartbeat or journal state. The VPS chat
+deployment is independent of the workstation. Save a dated copy of the landing
+directory before changing it, then verify `/`, `/status`, the protected chat
+login, and the authenticated status endpoint after deployment.
+
 ## Event record
 
 The journal contains monotonically increasing SQLite sequence numbers, unique
