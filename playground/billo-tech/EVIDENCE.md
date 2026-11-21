@@ -14,10 +14,10 @@ and no company was incorporated or contract signed.
 ## Evolution Vapes — Bangladesh business
 
 - The owner identifies their business as the Bangladesh Evolution Vapes at
-  `https://evolutionvapes.com/` and supplied `https://www.facebook.com/evovbd/`
-  as its page. `evolutionvapes.co.uk` is a separate UK franchise and is not the
-  owner's business. Earlier drafts incorrectly connected the two; that reference
-  is withdrawn.
+  `https://evolutionvapes.com/` and says the Facebook page username `evovbd`
+  belongs to the same business. `evolutionvapes.co.uk` is a separate UK
+  franchise and is not the owner's business. Earlier drafts incorrectly
+  connected the two; that reference is withdrawn.
 - The live `.com` domain currently returns HTTP 200 and is an active Hostinger
   WordPress site, but its page is a generic starter page. The local bridge design
   is not deployed. No WordPress content has been changed.
@@ -26,7 +26,9 @@ and no company was incorporated or contract signed.
   later account date does not change the 2018 registration date. Domain tenure
   supports the owner's recollection of a long-running business presence, but by
   itself does not prove when trading began.
-- A direct share URL for the owner's Google Business Profile was not confirmed.
+- A direct share URL for the owner's Google Business Profile was not confirmed,
+  and the supplied Facebook page could not be fetched by the web reader. No page
+  posts, review text, or profile details were independently inspected.
   Search results surfaced third-party directory copies, which are not treated as
   authoritative. No address, hours, phone number, rating, or review text from
   those directories has been copied into a site draft.
@@ -68,4 +70,3 @@ a review-only placeholder, not the former store-link concept.
 - [Bangladesh Government Press: official Gazette listing for Act 91 of 2026](https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/61244)
 - [Act 91 of 2026, unofficial English translation of the Gazette](https://assets.tobaccocontrollaws.org/uploads/legislation/Bangladesh/Bangladesh-TC-Amdt.-Act-2026.pdf)
 - [Hostinger: download a website backup](https://www.hostinger.com/support/5981435-how-to-download-backups-at-hostinger/)
-- [Owner-supplied Evolution Vapes Facebook page](https://www.facebook.com/evovbd/)
