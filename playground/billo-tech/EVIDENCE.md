@@ -82,6 +82,11 @@ incorporated or contract signed.
   WordPress site, but its page is still the generic “Welcome to WordPress”
   starter page. The local file is a review-only placeholder. No WordPress
   content has been changed.
+- A cache-bypassed dynamic request on 22 November still returned the starter
+  homepage. WordPress REST API reads returned one published `Hello world!`
+  post and no published pages. Search indexing still surfaced older storefront
+  copy and product listings, which are not present in the current origin
+  response and should not be treated as current verified business content.
 - A 22 November 2026 read-only check found one account database using 3 MiB of
   its 3 GiB allowance. Hostinger's account API reports no database assigned to
   `evolutionvapes.com`, and does not expose the database's tables or a SQL
