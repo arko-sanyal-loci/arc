@@ -30,6 +30,10 @@ It runs your model locally with persistent memory, dynamic GPU offloading, and a
 Arc is the runtime layer that connects the Loci memory engine to a running language model.  
 It gives a local model the same persistent memory, context compression, and failover routing that cloud models take for granted.
 
+For the workstation's authenticated, local-only evidence references and
+service setup, see [EVIDENCE-REFERENCES.md](docs/EVIDENCE-REFERENCES.md) and
+[WORKSTATION-CREDITS.md](docs/WORKSTATION-CREDITS.md).
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Arc Runtime                              │
@@ -81,8 +85,9 @@ It gives a local model the same persistent memory, context compression, and fail
 git clone https://github.com/arko-sanyal-loci/arc
 cd arc
 
-# 2. Install dependencies
-pip install -r requirements.txt
+# 2. Install the pinned workstation dependencies
+uv venv --python 3.14
+uv pip sync --python .venv/bin/python -r requirements-workstation.lock.txt
 
 # 3. Configure
 cp .env.example .env
@@ -90,8 +95,12 @@ cp .env.example .env
 
 # 4. Launch
 bash start.sh
-# → http://localhost:7860
+# → http://127.0.0.1:7860
 ```
+
+The workstation lock excludes `posix-ipc`, which is not imported by this
+runtime; no system Python headers are needed. The original broad
+`requirements.txt` remains available for other supported environments.
 
 ---
 

@@ -173,6 +173,9 @@ async def call_arc(message: str, context: list[dict]) -> AsyncIterator[str]:
             "stream": True,
             "max_tokens": 2048,
         }
+        configured_model = os.environ.get("ARC_MODEL")
+        if configured_model:
+            payload["model"] = configured_model
         try:
             async with client.stream("POST", f"{ARC_URL}/v1/chat/completions",
                                       json=payload) as resp:

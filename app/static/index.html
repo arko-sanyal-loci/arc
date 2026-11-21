@@ -178,6 +178,38 @@
   .provider-badge.local  { background: #1a2e1a; color: var(--green); }
   .provider-badge.nexos  { background: #1a1a2e; color: var(--accent); }
   .provider-badge.xai    { background: #2e1a1a; color: #ff9f0a; }
+  /* ── Workbench: private local preview and expandable project cards ── */
+  #workbench { border-bottom:1px solid var(--border); padding:10px 18px; background:#121215; }
+  #workbench summary { cursor:pointer; color:var(--text-dim); font-size:12px; font-weight:600; letter-spacing:.04em; }
+  #workbench-grid { display:grid; grid-template-columns:minmax(260px,1fr) minmax(260px,1fr); gap:10px; margin-top:10px; }
+  .work-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px; min-width:0; }
+  .work-card h3 { font-size:13px; display:flex; gap:8px; align-items:center; margin:0 0 8px; }
+  .work-card p { color:var(--text-dim); font-size:11px; line-height:1.5; }
+  .project-list { display:grid; gap:7px; }
+  .project { border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .project[open] { border-color:var(--accent); box-shadow:0 0 0 1px #6c6cff33; }
+  .project summary { display:flex; align-items:center; gap:8px; padding:8px; color:var(--text); letter-spacing:0; }
+  .project summary .project-status { margin-left:auto; color:var(--green); font-size:10px; }
+  .project-body { padding:0 10px 10px 34px; }
+  .project-body p { margin-bottom:5px; }
+  .project-body a { color:#aaaaff; font-size:11px; }
+  .icon { width:18px; height:18px; flex:none; color:#aaaaff; }
+  .av-actions { display:flex; gap:7px; flex-wrap:wrap; margin:8px 0; }
+  .av-actions button { background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px 9px; cursor:pointer; font-size:11px; }
+  .av-actions button:disabled { opacity:.45; cursor:not-allowed; }
+  .av-actions select { max-width:48%; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:7px; padding:6px; font-size:10px; }
+  #av-video { width:100%; max-height:180px; aspect-ratio:16/9; object-fit:cover; background:#09090b; border-radius:7px; display:none; }
+  #av-spectrum { width:100%; height:48px; background:#0c0c0e; border-radius:6px; display:block; }
+  #av-state { color:var(--text-dim); font-size:10px; margin-top:6px; }
+  .privacy-note { border-left:2px solid var(--green); padding-left:8px; margin-top:8px; }
+  #feedback-panel { position:fixed; right:16px; bottom:16px; width:min(420px,calc(100vw - 32px)); max-height:72vh; overflow:auto; z-index:20; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 44px #0009; padding:14px; display:none; }
+  #feedback-panel.open { display:block; }
+  #feedback-panel h3 { font-size:14px; margin-bottom:10px; }
+  #feedback-panel input,#feedback-panel textarea,#feedback-panel select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:8px; margin:4px 0; font:12px var(--font); }
+  #feedback-panel textarea { min-height:90px; resize:vertical; }
+  #feedback-items { max-height:180px; overflow:auto; margin-top:8px; }
+  .feedback-item { border-top:1px solid var(--border); padding:7px 2px; font-size:11px; white-space:pre-wrap; }
+  @media(max-width:760px) { #workbench-grid { grid-template-columns:1fr; } #workbench { padding:9px 12px; } }
 </style>
 </head>
 <body>
@@ -238,6 +270,31 @@
       </div>
     </div>
 
+    <details id="workbench">
+      <summary>WORKBENCH · local audio/video · GPU runs · repositories</summary>
+      <div id="workbench-grid">
+        <section class="work-card" aria-label="Local audio and video preview">
+          <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m16 10 5-3v10l-5-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 3v3m3-3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Local A/V preview</h3>
+          <p>Starts one browser capture stream. After permission, choose from cameras and microphones detected by this workstation; the spectrum is computed in this tab.</p>
+          <div class="av-actions"><button id="av-start" type="button">Allow camera + mic</button><button id="av-stop" type="button" disabled>Stop</button></div>
+          <div class="av-actions"><select id="av-camera-source" aria-label="Camera source" disabled><option value="">Default camera</option></select><select id="av-mic-source" aria-label="Microphone source" disabled><option value="">Default microphone</option></select></div>
+          <video id="av-video" autoplay muted playsinline></video>
+          <canvas id="av-spectrum" width="600" height="48" aria-label="Live microphone spectrum"></canvas>
+          <div id="av-state" role="status">Stopped · nothing is captured until you press Allow.</div>
+          <p class="privacy-note">Preview and spectrum stay in this browser tab. Arc chat currently accepts text only: no frames/audio are sent to a model, saved to RAG, or used to build a profile.</p>
+        </section>
+        <section class="work-card" aria-label="Projects and GPU work">
+          <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor" stroke-width="1.7"/><path d="M10 7h4m-7 3v4m10-4v4m-3 3h-4" stroke="currentColor" stroke-width="1.5"/></svg>Project map</h3>
+          <div class="project-list">
+            <details class="project"><summary><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4zM8 9l3 3-3 3m5 0h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Arc · chat/runtime <span class="project-status">UI source</span></summary><div class="project-body"><p>FastAPI + WebSocket chat with provider routing, health, memory and GPU status. This page is the live chat UI; Arc server is a separate process.</p><a href="https://github.com/arko-sanyal-loci/arc" target="_blank" rel="noreferrer">Repository ↗</a></div></details>
+            <details class="project"><summary><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5zM8 9h8M8 12h8M8 15h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>LOCI Memory Engine <span class="project-status">RAG journal</span></summary><div class="project-body"><p>Separate append-only, hash-chained RAG journal; versioned profiles, opt-in environment/user consent, and categorical heatmap with thresholds. This UI preview does not write to it.</p><a href="https://github.com/arko-sanyal/loci-memory-engine" target="_blank" rel="noreferrer">Repository ↗</a></div></details>
+            <details class="project"><summary><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4zM8 10h8M8 14h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="18" cy="15" r="1" fill="currentColor"/></svg>Mr Calendar · audio/video <span class="project-status">local project</span></summary><div class="project-body"><p>Audio/video timeline, voice spectrum measurements, local vision experiments, and adaptive GPU routing. Spectrum measures signal properties; it does not identify a speaker or infer gender. This workspace folder has no Git remote configured.</p><a href="http://127.0.0.1:11500/" target="_blank" rel="noreferrer">Open local A/V and GPU monitor ↗</a></div></details>
+            <details class="project"><summary><svg class="icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/><rect x="13" y="13" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1.7"/><path d="M11 8h4v5m-4 0h2" stroke="currentColor" stroke-width="1.7"/></svg>Parallel GPU work <span class="project-status">verified baseline</span></summary><div class="project-body"><p>Mr Calendar can send independent drafts to RTX and Arc, then reconcile. A prior warm functional run overlapped token delivery for 1.47 s. This is not speculative decoding or a per-turn Arc chat feature. Detailed run notes are in the local Mr Calendar project.</p></div></details>
+          </div>
+        </section>
+      </div>
+    </details>
+
     <div id="messages">
       <div id="empty-state">
         <div class="big-logo">A</div>
@@ -274,6 +331,7 @@
         <span class="hint-chip" onclick="suggest('@status')">@status</span>
         <span class="hint-chip" onclick="suggest('@ingest ')">@ingest</span>
         <span class="hint-chip" onclick="cycleProvider()">Switch provider</span>
+        <span class="hint-chip" onclick="toggleFeedback()">Agent feedback</span>
       </div>
       <div id="input-box">
         <textarea id="message-input" rows="1" placeholder="Message Arc…"
@@ -288,6 +346,19 @@
   </main>
 </div>
 
+<section id="feedback-panel" aria-label="Agent feedback panel" aria-live="polite">
+  <h3>Agent feedback · local Arc inbox</h3>
+  <form id="feedback-form">
+    <input id="feedback-agent" maxlength="80" placeholder="Agent name (e.g. Claude)" required>
+    <input id="feedback-project" maxlength="120" value="general" placeholder="Project">
+    <select id="feedback-kind"><option>observation</option><option>question</option><option>suggestion</option><option>issue</option></select>
+    <textarea id="feedback-message" maxlength="8000" placeholder="Share a finding, question, or handoff…" required></textarea>
+    <div class="av-actions"><button type="submit">Save feedback</button><button type="button" onclick="loadFeedback()">Refresh inbox</button><button type="button" onclick="toggleFeedback(false)">Close</button></div>
+    <div id="feedback-state" role="status"></div>
+  </form>
+  <div id="feedback-items"></div>
+</section>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 const PROVIDERS = ['LOCAL', 'NEXOS', 'XAI'];
@@ -298,6 +369,173 @@ let isStreaming = false;
 let conversations = [];
 let currentConvId = null;
 let statusInterval = null;
+function toggleFeedback(force) {
+  const panel = document.getElementById('feedback-panel');
+  panel.classList.toggle('open', force === undefined ? !panel.classList.contains('open') : force);
+  if (panel.classList.contains('open')) loadFeedback();
+}
+async function loadFeedback() {
+  const target = document.getElementById('feedback-items');
+  try {
+    const response = await fetch('/api/feedback?limit=50');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not load feedback');
+    target.replaceChildren();
+    for (const item of data.items || []) {
+      const row = document.createElement('div'); row.className = 'feedback-item';
+      row.textContent = `${new Date(item.created_at * 1000).toLocaleString()} · ${item.agent} · ${item.project} · ${item.kind}\n${item.message}`;
+      target.appendChild(row);
+    }
+    if (!target.childElementCount) target.textContent = 'No feedback yet.';
+  } catch (error) { target.textContent = error.message; }
+}
+document.getElementById('feedback-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const state = document.getElementById('feedback-state'); state.textContent = 'Saving…';
+  const body = {agent:document.getElementById('feedback-agent').value, project:document.getElementById('feedback-project').value || 'general', kind:document.getElementById('feedback-kind').value, message:document.getElementById('feedback-message').value};
+  try {
+    const response = await fetch('/api/feedback', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not save feedback');
+    document.getElementById('feedback-message').value = ''; state.textContent = 'Saved to the local Arc feedback journal.'; await loadFeedback();
+  } catch(error) { state.textContent = error.message; }
+});
+let avStream = null;
+let avContext = null;
+let avFrame = 0;
+
+// A user-initiated MediaStream keeps microphone analysis and camera preview
+// on one browser capture timeline. Nothing is uploaded or persisted here.
+async function refreshAvDevices() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  for (const [kind, id, fallback, trackKind] of [
+    ['videoinput', 'av-camera-source', 'Camera', 'video'],
+    ['audioinput', 'av-mic-source', 'Microphone', 'audio'],
+  ]) {
+    const select = document.getElementById(id);
+    const current = avStream?.getTracks().find(track => track.kind === trackKind)?.getSettings().deviceId;
+    const selected = select.value || current || '';
+    select.innerHTML = `<option value="">Default ${fallback.toLowerCase()}</option>`;
+    devices.filter(device => device.kind === kind).forEach((device, index) => {
+      const option = document.createElement('option');
+      option.value = device.deviceId;
+      option.textContent = device.label || `${fallback} ${index + 1}`;
+      select.appendChild(option);
+    });
+    if ([...select.options].some(option => option.value === selected)) select.value = selected;
+    select.disabled = devices.filter(device => device.kind === kind).length < 2;
+  }
+}
+
+async function startLocalAv() {
+  const state = document.getElementById('av-state');
+  try {
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Capture requires HTTPS or localhost in a supported browser.');
+    const cameraSelect = document.getElementById('av-camera-source');
+    const micSelect = document.getElementById('av-mic-source');
+    let cameraId = cameraSelect.value;
+    let micId = micSelect.value;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    if (cameraId && !devices.some(device => device.kind === 'videoinput' && device.deviceId === cameraId)) {
+      cameraId = '';
+      cameraSelect.value = '';
+    }
+    if (micId && !devices.some(device => device.kind === 'audioinput' && device.deviceId === micId)) {
+      micId = '';
+      micSelect.value = '';
+    }
+    const requestStream = (camera, microphone) => navigator.mediaDevices.getUserMedia({
+      video: camera ? {deviceId:{exact:camera}} : true,
+      audio: microphone ? {deviceId:{exact:microphone}} : true,
+    });
+    try {
+      avStream = await requestStream(cameraId, micId);
+    } catch (error) {
+      if (!['NotFoundError', 'OverconstrainedError'].includes(error.name) || (!cameraId && !micId)) throw error;
+      cameraSelect.value = '';
+      micSelect.value = '';
+      cameraId = '';
+      micId = '';
+      await refreshAvDevices();
+      state.textContent = 'A selected device is no longer available · retrying system defaults…';
+      avStream = await requestStream(cameraId, micId);
+    }
+    const video = document.getElementById('av-video');
+    video.srcObject = avStream;
+    video.style.display = 'block';
+    avContext = new AudioContext();
+    const source = avContext.createMediaStreamSource(avStream);
+    const analyser = avContext.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    const bins = new Uint8Array(analyser.frequencyBinCount);
+    const canvas = document.getElementById('av-spectrum');
+    const ctx = canvas.getContext('2d');
+    const draw = () => {
+      analyser.getByteFrequencyData(bins);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const step = Math.max(1, Math.floor(bins.length / 100));
+      for (let i = 0; i < 100; i++) {
+        const level = bins[i * step] / 255;
+        const h = Math.max(2, level * canvas.height);
+        ctx.fillStyle = `hsl(${145 - level * 80} 75% 60%)`;
+        ctx.fillRect(i * 6, canvas.height - h, 4, h);
+      }
+      avFrame = requestAnimationFrame(draw);
+    };
+    draw();
+    document.getElementById('av-start').disabled = true;
+    document.getElementById('av-stop').disabled = false;
+    const names = avStream.getTracks().map(t => t.label || t.kind).join(' · ');
+    state.textContent = `Live local preview · ${names}`;
+    await refreshAvDevices();
+  } catch (error) {
+    if (avStream) avStream.getTracks().forEach(track => track.stop());
+    avStream = null;
+    if (avContext) await avContext.close();
+    avContext = null;
+    const video = document.getElementById('av-video');
+    video.srcObject = null;
+    video.style.display = 'none';
+    document.getElementById('av-start').disabled = false;
+    document.getElementById('av-stop').disabled = true;
+    document.getElementById('av-camera-source').disabled = true;
+    document.getElementById('av-mic-source').disabled = true;
+    state.textContent = `Could not start: ${error.message}`;
+  }
+}
+async function stopLocalAv(showMessage = true) {
+  cancelAnimationFrame(avFrame);
+  if (avStream) avStream.getTracks().forEach(track => track.stop());
+  avStream = null;
+  if (avContext) await avContext.close();
+  avContext = null;
+  const video = document.getElementById('av-video');
+  video.srcObject = null;
+  video.style.display = 'none';
+  document.getElementById('av-spectrum').getContext('2d').clearRect(0, 0, 600, 48);
+  document.getElementById('av-start').disabled = false;
+  document.getElementById('av-stop').disabled = true;
+  document.getElementById('av-camera-source').disabled = true;
+  document.getElementById('av-mic-source').disabled = true;
+  if (showMessage) document.getElementById('av-state').textContent = 'Stopped · tracks released.';
+}
+document.getElementById('av-start').addEventListener('click', startLocalAv);
+document.getElementById('av-stop').addEventListener('click', () => stopLocalAv());
+for (const id of ['av-camera-source', 'av-mic-source']) {
+  document.getElementById(id).addEventListener('change', async () => {
+    if (!avStream) return;
+    await stopLocalAv(false);
+    await startLocalAv();
+  });
+}
+navigator.mediaDevices?.addEventListener?.('devicechange', async () => {
+  const captureLost = avStream?.getTracks().some(track => track.readyState === 'ended');
+  if (captureLost) {
+    await stopLocalAv(false);
+    document.getElementById('av-state').textContent = 'A camera or microphone disconnected · reconnect it, then press Allow again.';
+  }
+  try { await refreshAvDevices(); } catch (_) {}
+});
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
 function connectWS() {

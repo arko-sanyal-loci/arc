@@ -1,0 +1,27 @@
+{
+  "run_id": "matrix-20261120T043723Z-60328fba",
+  "created_utc": "2026-11-20T04:37:23.176687+00:00",
+  "purpose": "synthetic model\u00d7GPU paired comparison",
+  "models": {
+    "8b": "qwen3-vl:8b-instruct",
+    "27b": "qwen3.6:27b-q4_K_M"
+  },
+  "endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "rounds": 2,
+  "cases": [
+    "recall_exact",
+    "temporal_conflict",
+    "shader_packet",
+    "audio_features",
+    "grounded_abstention",
+    "vision_fixture"
+  ],
+  "context_tokens": 4096,
+  "max_output_tokens": 160,
+  "reasoning_mode": false,
+  "image_fixture": "synthetic_shader_like_fixture.png",
+  "privacy": "fictional fixtures only; no user or private account content"
+}

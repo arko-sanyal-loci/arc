@@ -1,0 +1,35 @@
+{
+  "fixture_sha256": "03f37a37c283d2afc9428e78daed40a20327e7c2bc8f673113039e2a67f756a5",
+  "prompts": [
+    {
+      "case": "recall_exact",
+      "prompt": "Fictional event log: 07:10 parcel R-42 arrived at dock C. 07:18 sensor read 18.4 C. 07:25 technician changed filter F-9. 07:40 parcel R-42 moved to shelf B3. What exact sensor value, filter, and final location are recorded? Return JSON with sensor_c, filter, location.",
+      "image": null
+    },
+    {
+      "case": "temporal_conflict",
+      "prompt": "Fictional versioned notes: at 09:00 status=amber, source=panel A; at 09:07 status=green, source=panel A; at 09:12 panel B reports amber but is marked lower priority. State current value, source, time, and preserve the superseded value. Return compact JSON.",
+      "image": null
+    },
+    {
+      "case": "shader_packet",
+      "prompt": "Interpret this synthetic shader packet. Separate measured from authored fields and report the packet's time, XY, RGB, label, authored Z and incidence. Do not infer physical depth. Packet: {\"t\":1.25,\"object\":\"blue-disc\",\"xy\":[0.418,0.431],\"z_authored\":2.0,\"incidence_authored\":43.2,\"blur_authored\":0.7,\"color_rgb\":[24,91,235],\"text\":\"B174\",\"moving\":true}.",
+      "image": null
+    },
+    {
+      "case": "audio_features",
+      "prompt": "Synthetic 24 kHz mono feature report: 10 ms RMS onset detector found events at 0.40, 0.90, and 1.40 seconds; dominant spectral centroid by event was 440, 660, and 440 Hz. Report measured facts separately from any mood interpretation, and state whether emotion can be established from these measurements alone.",
+      "image": null
+    },
+    {
+      "case": "grounded_abstention",
+      "prompt": "Fictional evidence contains only: frame at 00:01.2 shows a blue disc at normalized x=0.42; soundtrack feature has a 440 Hz onset at 0.40 s. Does the person feel afraid? Answer only what the evidence supports and identify what is unknown.",
+      "image": null
+    },
+    {
+      "case": "vision_fixture",
+      "prompt": "Read the synthetic image. Return JSON with visible label, object color, approximate normalized center x/y, and list what cannot be inferred. Do not guess emotion.",
+      "image": "synthetic_shader_like_fixture.png"
+    }
+  ]
+}

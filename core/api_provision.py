@@ -65,6 +65,11 @@ PROVIDER_ENDPOINTS = {
     Provider.XAI:    "https://api.x.ai/v1",
 }
 
+# The workstation's adaptive local gateway exposes OpenAI-compatible chat at
+# /v1/chat/completions and a separate health endpoint. Keep this opt-in so
+# direct Ollama deployments can continue using the default /v1/models probe.
+LOCAL_HEALTH_ENDPOINT = os.environ.get("LOCI_LOCAL_HEALTH_URL", "").strip()
+
 PROVIDER_MODELS = {
     Provider.LOCAL:        os.environ.get("LOCI_LOCAL_MODEL", "arc-local"),
     Provider.LOCAL_INTEL:  os.environ.get("LOCI_LOCAL_INTEL_MODEL", "arc-b70"),
@@ -164,7 +169,8 @@ async def _ping_provider(
     t0 = time.monotonic()
     try:
         async with session.get(
-            f"{endpoint}/models",
+            (LOCAL_HEALTH_ENDPOINT if provider == Provider.LOCAL and LOCAL_HEALTH_ENDPOINT
+             else f"{endpoint}/models"),
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:

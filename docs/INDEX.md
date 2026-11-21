@@ -8,6 +8,7 @@
 | File | Purpose | Key symbols |
 |---|---|---|
 | `app/server.py` | FastAPI server, WebSocket, MCP endpoint, lifespan wiring | `lifespan()`, `ChatRequest`, `IngestRequest`, `mcp_endpoint()` |
+| `AGENT-FEEDBACK-AND-STREAMS.md` | Agent feedback inbox, Nomic/VPS boundaries, TRS and A/V stream status | feedback routes, loopback policy, semantic-stream roadmap |
 | `core/heartbeat.py` | 140ms tick engine, /dev/shm ring, worker health tracking | `HeartbeatEngine`, `SHMRing`, `WorkerState`, `WorkerStatus` |
 | `core/tiered_memory.py` | 3-tier VRAM/DDR5/NVMe placement ledger | `TieredMemoryManager`, `plan_migrations()`, `heat_to_tier()`, `MigrationPlan`, `NodePlacement`, `TierCapacity`, `TierStats` |
 | `core/engine_sync.py` | Loci ↔ SQLite ↔ /dev/shm sync on every Nth heartbeat tick | `EngineSync`, `EngineState`, `_ensure_tables()`, `_count_rows()` |
@@ -171,3 +172,7 @@ SQLite at `data/arc.db` with WAL journal mode.
 
 Floor: `ALPHA = 0.0500` (Constant of Hope — heat never reaches 0).  
 Ceiling: `H_MAX = 0.9999` (sovereignty exception — `pinned=True` nodes are never migrated).
+# Operations
+
+- [Dispatch](DISPATCH.md) — design for an always-available maintenance and
+  incident journal shared through a VPS UI, Arc, and connected IDE agents.

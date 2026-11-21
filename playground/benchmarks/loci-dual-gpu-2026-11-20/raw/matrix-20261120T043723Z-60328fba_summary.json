@@ -1,0 +1,245 @@
+{
+  "scoring": "lowercase exact required-term coverage; screening metric, not semantic quality",
+  "groups": [
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "audio_features",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 6.5828468625,
+      "median_output_tok_s": 26.78910606832514
+    },
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "grounded_abstention",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 4.232453188,
+      "median_output_tok_s": 26.928232593566065
+    },
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "recall_exact",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 12.7190542345,
+      "median_output_tok_s": 26.832850042385644
+    },
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "shader_packet",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 6.575565274,
+      "median_output_tok_s": 26.77655734903638
+    },
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "temporal_conflict",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 3.652082933,
+      "median_output_tok_s": 26.96467898433698
+    },
+    {
+      "model_key": "27b",
+      "device": "arc_b70_vulkan",
+      "case": "vision_fixture",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 6.5141785425,
+      "median_output_tok_s": 26.83492967078218
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "audio_features",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 13.242979418000001,
+      "median_output_tok_s": 12.529889789490648
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "grounded_abstention",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 8.233352509500001,
+      "median_output_tok_s": 12.611762800428554
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "recall_exact",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 16.996877799499998,
+      "median_output_tok_s": 12.53598579700579
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "shader_packet",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 13.274892966,
+      "median_output_tok_s": 12.518918050294815
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "temporal_conflict",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 6.9700127075000005,
+      "median_output_tok_s": 12.618707474020718
+    },
+    {
+      "model_key": "27b",
+      "device": "rtx_5060ti_cuda",
+      "case": "vision_fixture",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 10.908744855999998,
+      "median_output_tok_s": 12.542879343347394
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "audio_features",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.2436681815,
+      "median_output_tok_s": 82.0925103019746
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "grounded_abstention",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.2335410265,
+      "median_output_tok_s": 81.65808004455283
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "recall_exact",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 3.0847111385,
+      "median_output_tok_s": 82.90806886415155
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "shader_packet",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.587924658,
+      "median_output_tok_s": 81.49193564522147
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "temporal_conflict",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.429564177,
+      "median_output_tok_s": 82.07519834303913
+    },
+    {
+      "model_key": "8b",
+      "device": "arc_b70_vulkan",
+      "case": "vision_fixture",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 3.122386952,
+      "median_output_tok_s": 76.64917146573327
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "audio_features",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.1469284625,
+      "median_output_tok_s": 81.12242653842074
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "grounded_abstention",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.126991466,
+      "median_output_tok_s": 81.1892171620671
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "recall_exact",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 4.259983028,
+      "median_output_tok_s": 81.22286778874522
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "shader_packet",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.491502487,
+      "median_output_tok_s": 80.83311262536503
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "temporal_conflict",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 1.3409199515,
+      "median_output_tok_s": 80.83225921198493
+    },
+    {
+      "model_key": "8b",
+      "device": "rtx_5060ti_cuda",
+      "case": "vision_fixture",
+      "n": 2,
+      "successes": 2,
+      "mean_term_coverage": 1.0,
+      "median_total_s": 2.1346124095,
+      "median_output_tok_s": 78.46499182029918
+    }
+  ]
+}

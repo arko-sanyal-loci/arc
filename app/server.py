@@ -19,8 +19,12 @@ MCP compatibility:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import hashlib
 import json
+import os
+import sqlite3
+import re
 import sys
 import time
 import uuid
@@ -31,7 +35,7 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Arc core
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -315,10 +319,75 @@ async def memory_search(q: str = "", limit: int = 10):
         return {"results": [], "error": str(exc)}
 
 
+class AgentFeedbackRequest(BaseModel):
+    agent: str = Field(min_length=1, max_length=80)
+    project: str = Field(default="general", min_length=1, max_length=120)
+    message: str = Field(min_length=1, max_length=8000)
+    kind: str = Field(default="observation", pattern="^(observation|question|suggestion|issue)$")
+
+
+def _feedback_db() -> sqlite3.Connection:
+    path = Path(__file__).parent.parent / "data" / "agent_feedback.sqlite3"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=5)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("""CREATE TABLE IF NOT EXISTS feedback (
+        id TEXT PRIMARY KEY, created_at REAL NOT NULL, agent TEXT NOT NULL,
+        project TEXT NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL
+    )""")
+    return conn
+
+
+@app.get("/api/feedback")
+async def list_feedback(limit: int = 50):
+    """Local-only feedback inbox for the Arc agent panel."""
+    if not 1 <= limit <= 200:
+        return JSONResponse({"error": "limit must be between 1 and 200"}, status_code=422)
+    try:
+        with _feedback_db() as conn:
+            rows = conn.execute(
+                "SELECT id,created_at,agent,project,kind,message FROM feedback ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return {"items": [dict(zip(("id", "created_at", "agent", "project", "kind", "message"), row)) for row in rows]}
+    except sqlite3.Error:
+        return JSONResponse({"error": "feedback store unavailable"}, status_code=503)
+
+
+@app.post("/api/feedback")
+async def submit_feedback(req: AgentFeedbackRequest, request: Request):
+    """Append a feedback item; API is intentionally restricted to loopback clients."""
+    if not request.client or request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse({"error": "loopback client required"}, status_code=403)
+    item_id = str(uuid.uuid4())
+    try:
+        with _feedback_db() as conn:
+            conn.execute(
+                "INSERT INTO feedback (id,created_at,agent,project,kind,message) VALUES (?,?,?,?,?,?)",
+                (item_id, time.time(), req.agent.strip(), req.project.strip(), req.kind, req.message.strip()),
+            )
+        return {"id": item_id, "status": "saved"}
+    except sqlite3.Error:
+        return JSONResponse({"error": "feedback store unavailable"}, status_code=503)
+
+
 class IngestRequest(BaseModel):
     content:  str
     category: str = "STANDARD"
     project:  str = "default"
+
+
+class EvidenceReferenceRequest(BaseModel):
+    event_id: str
+    recorded_at: str
+    source_label: str
+    size_bytes: int
+    sha256: str
+    vps_object: str
+    frame_references: list[dict] = Field(default_factory=list)
+
+    class Config:
+        extra = "forbid"
 
 
 @app.post("/api/memory/ingest")
@@ -340,6 +409,77 @@ async def memory_ingest(req: IngestRequest):
         return {"node_id": node_id, "status": "ingested"}
     except Exception as exc:
         return JSONResponse({"error": str(exc)}, status_code=500)
+
+
+@app.post("/api/evidence/reference")
+async def evidence_reference(req: EvidenceReferenceRequest, request: Request):
+    """Store a local-only, metadata-only pointer to encrypted evidence."""
+    if not request.client or request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse({"error": "loopback client required"}, status_code=403)
+    secret = os.environ.get("ARC_EVIDENCE_TOKEN", "")
+    if not secret:
+        return JSONResponse({"error": "evidence reference is not configured"}, status_code=503)
+    if not hmac.compare_digest(request.headers.get("authorization", ""), f"Bearer {secret}"):
+        return JSONResponse({"error": "invalid authorization"}, status_code=401)
+    try:
+        uuid.UUID(req.event_id)
+        if not re.fullmatch(r"[0-9a-f]{64}", req.sha256) or req.vps_object != req.sha256:
+            raise ValueError("invalid source hash")
+        if req.size_bytes < 0 or len(req.source_label) > 120 or len(req.frame_references) > 100:
+            raise ValueError("invalid evidence reference bounds")
+        safe_proxies = []
+        for proxy in req.frame_references:
+            if not isinstance(proxy, dict):
+                raise ValueError("invalid proxy reference")
+            path = proxy.get("proxy", "")
+            frame_map = proxy.get("frame_map", "")
+            if not re.fullmatch(r"proxies/[0-9a-f]{64}_\d+-\d+\.mp4", path):
+                raise ValueError("proxy path is invalid")
+            if not re.fullmatch(r"proxies/[0-9a-f]{64}_\d+-\d+\.frames\.json", frame_map):
+                raise ValueError("frame-map path is invalid")
+            for field in ("proxy_sha256", "frame_map_sha256"):
+                if not re.fullmatch(r"[0-9a-f]{64}", str(proxy.get(field, ""))):
+                    raise ValueError("proxy hash is invalid")
+            if proxy.get("audio_included") is not False:
+                raise ValueError("Arc references must use video-only review proxies")
+            safe_proxies.append({key: proxy[key] for key in (
+                "start_seconds", "end_seconds", "proxy", "proxy_sha256",
+                "frame_map", "frame_map_sha256", "frame_count", "audio_included"
+            ) if key in proxy})
+    except (ValueError, TypeError, KeyError) as exc:
+        return JSONResponse({"error": str(exc)[:180]}, status_code=400)
+    if not engine_sync or not engine_sync._conn:
+        return JSONResponse({"error": "db not ready"}, status_code=503)
+    content = json.dumps({
+        "schema": "loci.arc.evidence_reference.v1",
+        "event_id": req.event_id,
+        "recorded_at": req.recorded_at,
+        "source_label": req.source_label,
+        "size_bytes": req.size_bytes,
+        "sha256": req.sha256,
+        "encrypted_vps_object": req.vps_object,
+        "frame_references": safe_proxies,
+    }, sort_keys=True, separators=(",", ":"))
+    node_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "loci-evidence:" + req.event_id))
+    drive_hash = hashlib.sha256(content.encode()).hexdigest()
+    now = time.time()
+    try:
+        row = engine_sync._conn.execute(
+            "SELECT content, drive_hash FROM nodes WHERE node_id = ?", (node_id,)
+        ).fetchone()
+        if row:
+            if row != (content, drive_hash):
+                return JSONResponse({"error": "event ID already exists with different content"}, status_code=409)
+            return {"node_id": node_id, "status": "already_present"}
+        engine_sync._conn.execute(
+            "INSERT INTO nodes (node_id, category, project, content, drive_hash, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (node_id, "EVIDENCE_REFERENCE", "private-evidence", content, drive_hash, now, now),
+        )
+        engine_sync._conn.commit()
+        return {"node_id": node_id, "status": "referenced"}
+    except Exception as exc:
+        return JSONResponse({"error": str(exc)[:180]}, status_code=500)
 
 
 # ── MCP endpoint ──────────────────────────────────────────────────────────────
