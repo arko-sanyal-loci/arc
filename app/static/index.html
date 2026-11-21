@@ -209,6 +209,12 @@
   #feedback-panel textarea { min-height:90px; resize:vertical; }
   #feedback-items { max-height:180px; overflow:auto; margin-top:8px; }
   .feedback-item { border-top:1px solid var(--border); padding:7px 2px; font-size:11px; white-space:pre-wrap; }
+  #stream-panel { position:fixed; right:16px; bottom:16px; width:min(520px,calc(100vw - 32px)); max-height:76vh; overflow:auto; z-index:19; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 44px #0009; padding:14px; display:none; }
+  #stream-panel.open { display:block; }
+  #stream-panel h3 { font-size:14px; margin-bottom:8px; }
+  #stream-query { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:9px; margin:5px 0; font:12px var(--font); }
+  .stream-result { border-top:1px solid var(--border); padding:9px 2px; font-size:11px; }
+  .stream-result p { margin-top:5px; color:var(--text-dim); white-space:pre-wrap; }
   @media(max-width:760px) { #workbench-grid { grid-template-columns:1fr; } #workbench { padding:9px 12px; } }
 </style>
 </head>
@@ -273,15 +279,11 @@
     <details id="workbench">
       <summary>WORKBENCH · local audio/video · GPU runs · repositories</summary>
       <div id="workbench-grid">
-        <section class="work-card" aria-label="Local audio and video preview">
-          <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m16 10 5-3v10l-5-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 3v3m3-3v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Local A/V preview</h3>
-          <p>Starts one browser capture stream. After permission, choose from cameras and microphones detected by this workstation; the spectrum is computed in this tab.</p>
-          <div class="av-actions"><button id="av-start" type="button">Allow camera + mic</button><button id="av-stop" type="button" disabled>Stop</button></div>
-          <div class="av-actions"><select id="av-camera-source" aria-label="Camera source" disabled><option value="">Default camera</option></select><select id="av-mic-source" aria-label="Microphone source" disabled><option value="">Default microphone</option></select></div>
-          <video id="av-video" autoplay muted playsinline></video>
-          <canvas id="av-spectrum" width="600" height="48" aria-label="Live microphone spectrum"></canvas>
-          <div id="av-state" role="status">Stopped · nothing is captured until you press Allow.</div>
-          <p class="privacy-note">Preview and spectrum stay in this browser tab. Arc chat currently accepts text only: no frames/audio are sent to a model, saved to RAG, or used to build a profile.</p>
+        <section class="work-card" aria-label="Local audio and video analysis">
+          <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m16 10 5-3v10l-5-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Live audio + video analysis</h3>
+          <p>Choose the Havit microphone and camera in the panel, then press Start. Audio is transcribed locally and video motion/detail runs through the workstation GPU. On Stop, Arc appends transcripts and time/frame references to its versioned journal; raw audio and video are not retained.</p>
+          <p class="privacy-note">Capture remains off until you press Start and grant browser permission. Start only when everyone who may be captured has agreed. If the embedded panel is unavailable, <a href="http://127.0.0.1:11500/capture" target="_blank" rel="noreferrer">open the local A/V panel</a>.</p>
+          <iframe src="http://127.0.0.1:11500/capture" title="Arc local audio and video analysis" allow="camera; microphone" referrerpolicy="no-referrer" style="display:block;width:100%;height:760px;border:1px solid var(--line);border-radius:12px;background:#101614"></iframe>
         </section>
         <section class="work-card" aria-label="Projects and GPU work">
           <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" stroke="currentColor" stroke-width="1.7"/><path d="M10 7h4m-7 3v4m10-4v4m-3 3h-4" stroke="currentColor" stroke-width="1.5"/></svg>Project map</h3>
@@ -332,6 +334,7 @@
         <span class="hint-chip" onclick="suggest('@ingest ')">@ingest</span>
         <span class="hint-chip" onclick="cycleProvider()">Switch provider</span>
         <span class="hint-chip" onclick="toggleFeedback()">Agent feedback</span>
+        <span class="hint-chip" onclick="toggleStreams()">Semantic streams</span>
       </div>
       <div id="input-box">
         <textarea id="message-input" rows="1" placeholder="Message Arc…"
@@ -358,6 +361,13 @@
   </form>
   <div id="feedback-items"></div>
 </section>
+<section id="stream-panel" aria-label="Semantic stream search" aria-live="polite">
+  <h3>Semantic stream search · Nomic</h3>
+  <input id="stream-query" maxlength="4000" placeholder="Describe the audio/video transcript or stream context to find…">
+  <div class="av-actions"><button type="button" onclick="searchStreams()">Search indexed streams</button><button type="button" onclick="toggleStreams(false)">Close</button></div>
+  <div id="stream-state" role="status">Searches only explicitly indexed, consent-scoped text segments.</div>
+  <div id="stream-results"></div>
+</section>
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
@@ -373,6 +383,31 @@ function toggleFeedback(force) {
   const panel = document.getElementById('feedback-panel');
   panel.classList.toggle('open', force === undefined ? !panel.classList.contains('open') : force);
   if (panel.classList.contains('open')) loadFeedback();
+}
+function toggleStreams(force) {
+  const panel = document.getElementById('stream-panel');
+  panel.classList.toggle('open', force === undefined ? !panel.classList.contains('open') : force);
+  if (panel.classList.contains('open')) document.getElementById('stream-query').focus();
+}
+async function searchStreams() {
+  const query = document.getElementById('stream-query').value.trim();
+  const state = document.getElementById('stream-state');
+  const results = document.getElementById('stream-results');
+  if (!query) { state.textContent = 'Enter a search query.'; return; }
+  state.textContent = 'Searching with Nomic…'; results.replaceChildren();
+  try {
+    const response = await fetch(`/api/streams/search?q=${encodeURIComponent(query)}&limit=10`);
+    const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Search failed');
+    state.textContent = `${data.results.length} matching indexed stream version(s) · ${data.embedding_model}`;
+    for (const item of data.results) {
+      const row = document.createElement('article'); row.className = 'stream-result';
+      const heading = document.createElement('strong');
+      heading.textContent = `${item.source_label} · ${item.similarity} similarity · ${item.stream_id} v${item.version}`;
+      const detail = document.createElement('p');
+      detail.textContent = `${item.excerpt}\nSource: ${item.source_id}${item.source_sha256 ? ` · SHA-256 ${item.source_sha256}` : ''}${item.start_ms !== null ? ` · ${item.start_ms}–${item.end_ms ?? '?'} ms` : ''}\nFrames: ${JSON.stringify(item.frame_references)}`;
+      row.append(heading, detail); results.appendChild(row);
+    }
+  } catch(error) { state.textContent = error.message; }
 }
 async function loadFeedback() {
   const target = document.getElementById('feedback-items');

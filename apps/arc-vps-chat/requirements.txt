@@ -1,0 +1,4 @@
+# Optional on the VPS: voice transcription is local CPU-only.
+faster-whisper>=1.1
+av>=14,<19
+numpy>=1.26

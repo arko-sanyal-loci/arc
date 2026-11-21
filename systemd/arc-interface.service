@@ -1,6 +1,7 @@
 [Unit]
 Description=Arc local interface and memory API
-After=default.target
+Wants=arc-nomic-tunnel.service
+After=default.target arc-nomic-tunnel.service
 
 [Service]
 Type=simple
@@ -10,6 +11,8 @@ Environment=PYTHONUNBUFFERED=1
 Environment=LOCI_LOCAL_BASE_URL=http://127.0.0.1:11437/v1
 Environment=LOCI_LOCAL_MODEL=arc-local
 Environment=LOCI_LOCAL_HEALTH_URL=http://127.0.0.1:11437/health
+Environment=ARC_NOMIC_EMBED_BASE_URL=http://127.0.0.1:11435
+Environment=ARC_NOMIC_FALLBACK_URL=http://127.0.0.1:11438
 ExecStart=%h/src/arko-sanyal-loci/arc-canonical/.venv/bin/uvicorn server:app --app-dir app --host 127.0.0.1 --port 7860 --no-access-log
 Restart=on-failure
 RestartSec=3
