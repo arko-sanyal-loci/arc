@@ -1,8 +1,11 @@
 # Arc Dispatch — persistent operations journal and maintenance notices
 
-**Status: design; not implemented or deployed.** This document records the
-dispatch requirement for Arc and LOCI. The existing Arc chat UI, MCP endpoint,
-health API, and workstation timers do not yet provide this capability.
+**Status: interim GitHub Issues board available; custom service not
+implemented.** The private [LOCI Dispatch repository](https://github.com/arko-sanyal-loci/loci-dispatch)
+provides a mobile-capable issue form and durable handoff comments now. This
+document records the target VPS/API and Arc/MCP implementation. The existing
+Arc chat UI, MCP endpoint, health API, and workstation timers do not yet expose
+Dispatch directly.
 
 ## Purpose
 
@@ -13,7 +16,17 @@ a small authenticated web UI hosted independently of the workstation. Arc and
 connected IDE agents can read and acknowledge the same entries through MCP and
 an API.
 
-## Topology
+### Interim procedure
+
+Until the target service below is deployed, use the private GitHub Issues page
+as the GUI. Create a **System dispatch** issue with the reason, affected
+systems, UTC start and expected return, and a recovery plan. Confirm it appears
+in the Issues list before shutdown. Record acknowledgements and recovery as
+comments; close the issue after service health is checked. Repo access is
+required; the issue board cannot push notices into clients that are not
+connected to GitHub.
+
+## Target topology
 
 ```text
 Phone/browser ───────┐
@@ -24,7 +37,7 @@ Arc/workstation ─────┘                 └── notification adapte
         └── durable local outbox; retries after network returns
 ```
 
-The VPS journal is authoritative. The workstation keeps an encrypted local
+In the target implementation, the VPS journal is authoritative. The workstation keeps an encrypted local
 outbox and cache so it can queue a dispatch while offline and synchronize it
 when connectivity returns. A successful create must return a server event ID
 and timestamp before the UI says “saved.” If the server cannot be reached, the
@@ -119,6 +132,6 @@ as a startup context resource.
 6. Restore from an encrypted backup and verify event IDs, ordering, and hashes.
 
 Until these checks pass and the service is deployed, the supported procedure is
-to post a maintenance notice to an independently reachable existing channel
-before shutdown and explicitly confirm it was saved. There is no Dispatch GUI
-in the current Arc build yet.
+to use the private GitHub Issues board described above and explicitly confirm
+the issue was saved. A custom Dispatch GUI/API and direct Arc MCP integration are
+not in the current Arc build yet.
