@@ -35,10 +35,14 @@ incorporated or contract signed.
   intake, and workstation-backup timers were enabled; and systemd user
   lingering was on. These user services can start at boot before an
   interactive login. Media capture itself remains user-started and opt-in.
-- The same workstation check detected two camera nodes and three microphone
-  inputs, but no active capture process was running. Device counts are
-  inventory only: audio/video streaming and the consented evidence flow have
-  not been verified end to end with user-supplied media.
+- A later read-only V4L2 capability check found `/dev/video1` is the frame
+  capture node and `/dev/video2` is metadata-only. The monitor and desktop
+  overlay now exclude metadata-only nodes; a restarted monitor reports only
+  `/dev/video1`. Three microphone inputs are detected, all `SUSPENDED`, and no
+  active capture process is running. VPS telemetry sequence 1050 was accepted
+  after this correction. This verifies device inventory and telemetry delivery,
+  not live audio/video capture or an end-to-end evidence intake with
+  user-supplied media.
 - Provider credentials were removed from the tracked `config/arc_config.yaml`
   and the persistent Arc service now accepts keys from the owner-only
   `~/.config/loci/arc-provider-keys.env`. That file is empty until the owner
