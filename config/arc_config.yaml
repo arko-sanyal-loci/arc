@@ -14,8 +14,8 @@ server:
 # Prefer environment variables: ARC_XAI_KEY, ARC_NEXOS_KEY, ARC_LOCAL_KEY
 # Values here are overridden by env vars if set.
 api_keys:
-  xai:   "${ARC_XAI_KEY}"      # Grok — failsafe provider
-  nexos: "${ARC_NEXOS_KEY}"    # nexos.ai — compute offset provider
+  xai: ""
+  nexos: ""
   local: ""                    # optional bearer token for local endpoint
 
 # ── Provider routing ───────────────────────────────────────────────────────

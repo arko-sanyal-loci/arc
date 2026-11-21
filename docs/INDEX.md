@@ -92,7 +92,11 @@ All dispatched through `POST /mcp` with `{"method": "tools/call", "params": {"na
 | `ARC_PORT` | `7860` | Port uvicorn binds on |
 | `ARC_DB_PATH` | `data/arc.db` | SQLite database path |
 
-Keys are loaded from `.env` by `start.sh` before the server starts, and read by `APIKeys.from_env()` at provisioner init.
+The CLI launcher loads keys from the untracked `.env`. The persistent
+workstation service reads `~/.config/loci/arc-provider-keys.env` (mode `0600`);
+`APIKeys.from_config()` gives environment keys precedence over the tracked YAML
+defaults. Keep real provider credentials out of Git and restart
+`arc-interface.service` after rotating or adding a key.
 
 ---
 

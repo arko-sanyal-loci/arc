@@ -7,6 +7,7 @@ After=default.target arc-nomic-tunnel.service
 Type=simple
 WorkingDirectory=%h/src/arko-sanyal-loci/arc-canonical
 EnvironmentFile=-%h/.config/loci/arc-evidence-token
+EnvironmentFile=-%h/.config/loci/arc-provider-keys.env
 Environment=PYTHONUNBUFFERED=1
 Environment=LOCI_LOCAL_BASE_URL=http://127.0.0.1:11437/v1
 Environment=LOCI_LOCAL_MODEL=arc-local

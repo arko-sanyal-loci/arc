@@ -116,14 +116,16 @@ class APIKeys:
 
     @classmethod
     def from_config(cls, config_path: str = "config/arc_config.yaml") -> "APIKeys":
-        """Load keys from YAML config (plain-text; use env vars in production)."""
+        """Load provider keys from environment first, with YAML as a local fallback."""
         try:
             import yaml  # type: ignore
             cfg = yaml.safe_load(Path(config_path).read_text())
             keys = cfg.get("api_keys", {})
             return cls(
-                nexos=keys.get("nexos"),
-                xai=keys.get("xai"),
+                nexos=(os.environ.get("ARC_NEXOS_KEY") or os.environ.get("NEXOS_API_KEY")
+                       or keys.get("nexos")),
+                xai=(os.environ.get("ARC_XAI_KEY") or os.environ.get("XAI_API_KEY")
+                     or keys.get("xai")),
                 local=keys.get("local", "ollama"),
                 local_intel=keys.get("local_intel", "local"),
                 local_sglang=keys.get("local_sglang", "local"),

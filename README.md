@@ -94,12 +94,19 @@ uv pip sync --python .venv/bin/python -r requirements-workstation.lock.txt
 
 # 3. Configure
 cp .env.example .env
-# edit .env — add ARC_XAI_KEY and/or ARC_NEXOS_KEY
+# add ARC_XAI_KEY and/or ARC_NEXOS_KEY to the untracked .env file
 
 # 4. Launch
 bash start.sh
 # → http://127.0.0.1:7860
 ```
+
+The installed systemd user service reads provider credentials from
+`~/.config/loci/arc-provider-keys.env` (owner-only, mode `0600`). Put
+`ARC_XAI_KEY=...` and/or `ARC_NEXOS_KEY=...` there for the persistent service,
+then restart it with `systemctl --user restart arc-interface.service`. The
+tracked `config/arc_config.yaml` intentionally contains no external provider
+credentials; environment values override its non-secret defaults.
 
 The workstation lock excludes `posix-ipc`, which is not imported by this
 runtime; no system Python headers are needed. The original broad
