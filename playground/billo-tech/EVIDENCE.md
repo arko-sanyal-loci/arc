@@ -30,6 +30,11 @@ incorporated or contract signed.
   semantic search returned one match for the health query. This verifies the
   query/embedding/retrieval path; it does not prove that every agent or system
   has an identical or complete index.
+- On 22 November, `arc-interface.service`, `arc-monitor.service`, and
+  `arc-nomic-tunnel.service` were enabled; the memory-sync, telemetry, evidence
+  intake, and workstation-backup timers were enabled; and systemd user
+  lingering was on. These user services can start at boot before an
+  interactive login. Media capture itself remains user-started and opt-in.
 - The same workstation check detected two camera nodes and three microphone
   inputs, but no active capture process was running. Device counts are
   inventory only: audio/video streaming and the consented evidence flow have
