@@ -17,7 +17,9 @@ incorporated or contract signed.
 - Before the landing changes, two dated VPS archives were saved under
   `/var/backups/`: `billo-tech-landing-before-20261122.tar.gz` and
   `billo-tech-landing-before-links-20261122.tar.gz`. They preserve the previous
-  live landing files for rollback.
+  live landing files for rollback. Their SHA-256 values are respectively
+  `731c30067548a629854f90ad130a41940d71bbee29058559ed44a73858793022` and
+  `de5751d894d51d46b7855f886a534d51675e2f2d33a546ef3a05f9843b8ea949`.
 - At the final 22 November health check, the VPS accepted workstation
   telemetry sequence 972. The workstation was online, both inference lanes
   were ready, and the VPS journal verified 583 records. This proves the
