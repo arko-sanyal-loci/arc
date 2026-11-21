@@ -40,20 +40,22 @@ and no company was incorporated or contract signed.
 ## Bangladesh publication constraint
 
 The official gazette lists Act 91 of 2026, effective 10 April 2026. The
-published amendment repeals the 2025 Ordinance, including its broad vape-sale
-ban language, while section 5 continues to prohibit tobacco product advertising
-in websites, web pages, internet media, and social media. It defines advertising
-as commercial activity, directly or indirectly, for the purpose of promoting a
-tobacco product or its use. Whether a proposed business-identity or information
-page falls within that definition requires advice from Bangladesh-qualified
-counsel. The amended act does not by itself resolve separate import, product,
-licensing, payment, or age-related requirements.
+published amendment repeals the 2025 Ordinance, including its express broad
+ENDS/vape sale-and-promotion prohibition. Section 5 continues to prohibit tobacco
+product advertising in websites, web pages, internet media, and social media; it
+defines advertising as commercial activity, directly or indirectly, for the
+purpose of promoting a tobacco product or its use. The exact treatment of
+vape-specific testimonial marketing under the amended text is not settled by the
+sources reviewed here, so this note makes no legal conclusion about its
+permissibility. Bangladesh-qualified counsel should determine how the current
+law applies to the intended page and product category. Separate import, product,
+licensing, payment, and age-related requirements also remain unverified.
 
-Because the planned page concerns a vape business and the scope of the online
-advertising restriction is broad, the branded page is not ready to publish. Keep
-the current WordPress site unchanged until counsel reviews the intended content
-and the owner confirms the exact Google Business Profile. The local HTML is now
-a review-only placeholder, not the former store-link concept.
+Because the planned page concerns a vape business and the law's application to
+that business is unresolved, the branded page is not ready to publish. Keep the
+current WordPress site unchanged until counsel reviews the intended content and
+the owner confirms the exact Google Business Profile. The local HTML is now a
+review-only placeholder, not the former store-link concept.
 
 ## Billo Tech concept and collaboration draft
 
