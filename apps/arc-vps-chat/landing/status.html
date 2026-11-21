@@ -23,6 +23,7 @@
     .card { margin-top:14px; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
     .row { display:flex; justify-content:space-between; gap:18px; align-items:center; }
     .state { color:var(--warn); font-weight:700; white-space:nowrap; }
+    .state-good { color:var(--accent); }
     footer { border-top:1px solid var(--line); padding:25px 0; color:var(--muted); font-size:.9rem; }
     @media(max-width:520px) { .row { align-items:flex-start; flex-direction:column; gap:3px; } }
   </style>
@@ -39,15 +40,15 @@
     <h1>System status</h1>
     <p>This page reports the public website and the current deployment boundary. It does not expose internal memory, customer data, or unauthenticated API operations.</p>
     <section class="card">
-      <div class="row"><h2>Public website</h2><span class="state">Available</span></div>
+      <div class="row"><h2>Public website</h2><span class="state state-good">Available</span></div>
       <p>The static Billo Tech landing page and this status page are served through the public web stack.</p>
     </section>
     <section class="card">
-      <div class="row"><h2>Billo API and worker</h2><span class="state">Not running</span></div>
+      <div class="row"><h2>Landing pages</h2><span class="state state-good">Available</span></div>
       <p>The public landing pages are served separately from the protected Arc continuity service.</p>
     </section>
     <section class="card">
-      <div class="row"><h2>Arc continuity chat</h2><span class="state">Available · sign-in required</span></div>
+      <div class="row"><h2>Arc continuity chat</h2><span class="state state-good">Available · sign-in required</span></div>
       <p>The chat runs on the VPS with its local Ollama model and an encrypted, append-only conversation journal. It remains available when the workstation is offline.</p>
       <p>For the latest workstation heartbeat, Ollama status and journal verification, sign in to the <a href="/arko/chat">protected Arc chat</a>.</p>
     </section>
