@@ -21,6 +21,11 @@ and no company was incorporated or contract signed.
 - The live `.com` domain currently returns HTTP 200 and is an active Hostinger
   WordPress site, but its page is a generic starter page. The local bridge design
   is not deployed. No WordPress content has been changed.
+- Hostinger's domain record shows `evolutionvapes.com` was registered on
+  11 October 2018. Its Hostinger portfolio entry dates to 11 January 2022; that
+  later account date does not change the 2018 registration date. Domain tenure
+  supports the owner's recollection of a long-running business presence, but by
+  itself does not prove when trading began.
 - A direct share URL for the owner's Google Business Profile was not confirmed.
   Search results surfaced third-party directory copies, which are not treated as
   authoritative. No address, hours, phone number, rating, or review text from
