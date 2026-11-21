@@ -33,6 +33,9 @@ It gives a local model the same persistent memory, context compression, and fail
 For the workstation's authenticated, local-only evidence references and
 service setup, see [EVIDENCE-REFERENCES.md](docs/EVIDENCE-REFERENCES.md) and
 [WORKSTATION-CREDITS.md](docs/WORKSTATION-CREDITS.md).
+For the local agent feedback inbox, Nomic embedding service, and the exact
+current limits of TRS/A/V semantic retrieval, see
+[Agent feedback and semantic streams](docs/AGENT-FEEDBACK-AND-STREAMS.md).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
