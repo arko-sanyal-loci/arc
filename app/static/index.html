@@ -379,12 +379,35 @@ async function startLocalAv() {
   const state = document.getElementById('av-state');
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Capture requires HTTPS or localhost in a supported browser.');
-    const cameraId = document.getElementById('av-camera-source').value;
-    const micId = document.getElementById('av-mic-source').value;
-    avStream = await navigator.mediaDevices.getUserMedia({
-      video: cameraId ? {deviceId:{exact:cameraId}} : true,
-      audio: micId ? {deviceId:{exact:micId}} : true,
+    const cameraSelect = document.getElementById('av-camera-source');
+    const micSelect = document.getElementById('av-mic-source');
+    let cameraId = cameraSelect.value;
+    let micId = micSelect.value;
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    if (cameraId && !devices.some(device => device.kind === 'videoinput' && device.deviceId === cameraId)) {
+      cameraId = '';
+      cameraSelect.value = '';
+    }
+    if (micId && !devices.some(device => device.kind === 'audioinput' && device.deviceId === micId)) {
+      micId = '';
+      micSelect.value = '';
+    }
+    const requestStream = (camera, microphone) => navigator.mediaDevices.getUserMedia({
+      video: camera ? {deviceId:{exact:camera}} : true,
+      audio: microphone ? {deviceId:{exact:microphone}} : true,
     });
+    try {
+      avStream = await requestStream(cameraId, micId);
+    } catch (error) {
+      if (!['NotFoundError', 'OverconstrainedError'].includes(error.name) || (!cameraId && !micId)) throw error;
+      cameraSelect.value = '';
+      micSelect.value = '';
+      cameraId = '';
+      micId = '';
+      await refreshAvDevices();
+      state.textContent = 'A selected device is no longer available · retrying system defaults…';
+      avStream = await requestStream(cameraId, micId);
+    }
     const video = document.getElementById('av-video');
     video.srcObject = avStream;
     video.style.display = 'block';
@@ -454,6 +477,14 @@ for (const id of ['av-camera-source', 'av-mic-source']) {
     await startLocalAv();
   });
 }
+navigator.mediaDevices?.addEventListener?.('devicechange', async () => {
+  const captureLost = avStream?.getTracks().some(track => track.readyState === 'ended');
+  if (captureLost) {
+    await stopLocalAv(false);
+    document.getElementById('av-state').textContent = 'A camera or microphone disconnected · reconnect it, then press Allow again.';
+  }
+  try { await refreshAvDevices(); } catch (_) {}
+});
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
 function connectWS() {
