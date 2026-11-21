@@ -1,14 +1,34 @@
-# Billo Tech and Evolution Vapes review note — 21 November 2026
+# Billo Tech and Evolution Vapes review note — 22 November 2026
 
-This is a repository planning note. Neither preview is a production deployment,
-and no company was incorporated or contract signed.
+This is a repository evidence and launch-status note. Billo Tech's static
+research homepage and protected Arc continuity service are deployed. The
+Evolution Vapes WordPress site has not been replaced. No company was
+incorporated or contract signed.
 
 ## Billo Tech
 
-- `https://billo.tech/` currently returns HTTP 200 and its title identifies the
-  LOCI memory site. The live site is not the same as the local static concept.
-- This HTTP check does not establish that a Billo API, worker, or live
-  LOCI-to-Billo memory replication is deployed. Those capabilities remain
+- `https://billo.tech/` serves the static research homepage from the VPS. The
+  published source is `playground/billo-tech/index.html` plus `site.css`. The
+  page describes Billo Tech as a working research identity and labels
+  prototypes and measurement limits.
+- On 22 November 2026, the homepage and `/status` returned HTTP 200. The
+  protected `/arko/chat` route returned HTTP 401 when checked without a login,
+  as expected. The homepage links directly to chat and status.
+- Before the landing changes, two dated VPS archives were saved under
+  `/var/backups/`: `billo-tech-landing-before-20261122.tar.gz` and
+  `billo-tech-landing-before-links-20261122.tar.gz`. They preserve the previous
+  live landing files for rollback.
+- At the final 22 November health check, the VPS accepted workstation
+  telemetry sequence 972. The workstation was online, both inference lanes
+  were ready, and the VPS journal verified 583 records. This proves the
+  continuity telemetry path and journal integrity at that check; it does not
+  prove live media capture or cross-runtime LOCI-to-Billo memory replication.
+- The same workstation check detected two camera nodes and three microphone
+  inputs, but no active capture process was running. Device counts are
+  inventory only: audio/video streaming and the consented evidence flow have
+  not been verified end to end with user-supplied media.
+- The static Billo page does not establish that a Billo company, production
+  API, worker, or integrated Billo memory platform exists. Those remain
   outstanding.
 
 ## Evolution Vapes — Bangladesh business
@@ -19,8 +39,9 @@ and no company was incorporated or contract signed.
   franchise and is not the owner's business. Earlier drafts incorrectly
   connected the two; that reference is withdrawn.
 - The live `.com` domain currently returns HTTP 200 and is an active Hostinger
-  WordPress site, but its page is a generic starter page. The local bridge design
-  is not deployed. No WordPress content has been changed.
+  WordPress site, but its page is still the generic “Welcome to WordPress”
+  starter page. The local file is a review-only placeholder. No WordPress
+  content has been changed.
 - A 22 November 2026 read-only check found one account database using 3 MiB of
   its 3 GiB allowance. Hostinger's account API reports no database assigned to
   `evolutionvapes.com`, and does not expose the database's tables or a SQL
@@ -40,9 +61,11 @@ and no company was incorporated or contract signed.
   authoritative. No address, hours, phone number, rating, or review text from
   those directories has been copied into a site draft.
 - Hostinger's API did not expose an operation for downloading a full WordPress
-  files-and-database backup. A current full backup is still required before any
-  homepage replacement; Hostinger's documented method is through hPanel and a
-  download link sent to the account email.
+  files-and-database backup or SQL export. A current recoverable full backup is
+  still required before any homepage replacement; obtain the website archive
+  and database dump through hPanel. Bangladesh-qualified counsel must also
+  review the intended page and product category before publication because the
+  current law's application to the proposed business page is unresolved.
 
 ## Shopify and Loyverse evaluation
 
@@ -84,8 +107,9 @@ review-only placeholder, not the former store-link concept.
 
 ## Billo Tech concept and collaboration draft
 
-- The Billo Tech showcase is a self-contained HTML/CSS concept; it does not
-  claim an API or private-context endpoint is deployed.
+- The Billo Tech showcase is a self-contained HTML/CSS research site. The
+  protected Arc continuity chat is a separate deployed service, not a Billo
+  production API or a live private-memory replication service.
 - The public-redacted collaboration draft is review material, not a signed
   agreement. Company registration, ownership, authority, and legal review remain
   outstanding.
