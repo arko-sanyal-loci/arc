@@ -20,11 +20,16 @@ incorporated or contract signed.
   live landing files for rollback. Their SHA-256 values are respectively
   `731c30067548a629854f90ad130a41940d71bbee29058559ed44a73858793022` and
   `de5751d894d51d46b7855f886a534d51675e2f2d33a546ef3a05f9843b8ea949`.
-- At the final 22 November health check, the VPS accepted workstation
+- At a 22 November health check, the VPS accepted workstation
   telemetry sequence 972. The workstation was online, both inference lanes
   were ready, and the VPS journal verified 583 records. This proves the
   continuity telemetry path and journal integrity at that check; it does not
   prove live media capture or cross-runtime LOCI-to-Billo memory replication.
+- A later 22 November read-only check returned finite 768-dimensional Nomic
+  embeddings from both the local endpoint and secured VPS tunnel. Arc's
+  semantic search returned one match for the health query. This verifies the
+  query/embedding/retrieval path; it does not prove that every agent or system
+  has an identical or complete index.
 - The same workstation check detected two camera nodes and three microphone
   inputs, but no active capture process was running. Device counts are
   inventory only: audio/video streaming and the consented evidence flow have
