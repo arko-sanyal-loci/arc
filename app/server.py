@@ -23,6 +23,7 @@ import hmac
 import hashlib
 import json
 import os
+import sqlite3
 import re
 import sys
 import time
@@ -316,6 +317,58 @@ async def memory_search(q: str = "", limit: int = 10):
         }
     except Exception as exc:
         return {"results": [], "error": str(exc)}
+
+
+class AgentFeedbackRequest(BaseModel):
+    agent: str = Field(min_length=1, max_length=80)
+    project: str = Field(default="general", min_length=1, max_length=120)
+    message: str = Field(min_length=1, max_length=8000)
+    kind: str = Field(default="observation", pattern="^(observation|question|suggestion|issue)$")
+
+
+def _feedback_db() -> sqlite3.Connection:
+    path = Path(__file__).parent.parent / "data" / "agent_feedback.sqlite3"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=5)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("""CREATE TABLE IF NOT EXISTS feedback (
+        id TEXT PRIMARY KEY, created_at REAL NOT NULL, agent TEXT NOT NULL,
+        project TEXT NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL
+    )""")
+    return conn
+
+
+@app.get("/api/feedback")
+async def list_feedback(limit: int = 50):
+    """Local-only feedback inbox for the Arc agent panel."""
+    if not 1 <= limit <= 200:
+        return JSONResponse({"error": "limit must be between 1 and 200"}, status_code=422)
+    try:
+        with _feedback_db() as conn:
+            rows = conn.execute(
+                "SELECT id,created_at,agent,project,kind,message FROM feedback ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return {"items": [dict(zip(("id", "created_at", "agent", "project", "kind", "message"), row)) for row in rows]}
+    except sqlite3.Error:
+        return JSONResponse({"error": "feedback store unavailable"}, status_code=503)
+
+
+@app.post("/api/feedback")
+async def submit_feedback(req: AgentFeedbackRequest, request: Request):
+    """Append a feedback item; API is intentionally restricted to loopback clients."""
+    if not request.client or request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse({"error": "loopback client required"}, status_code=403)
+    item_id = str(uuid.uuid4())
+    try:
+        with _feedback_db() as conn:
+            conn.execute(
+                "INSERT INTO feedback (id,created_at,agent,project,kind,message) VALUES (?,?,?,?,?,?)",
+                (item_id, time.time(), req.agent.strip(), req.project.strip(), req.kind, req.message.strip()),
+            )
+        return {"id": item_id, "status": "saved"}
+    except sqlite3.Error:
+        return JSONResponse({"error": "feedback store unavailable"}, status_code=503)
 
 
 class IngestRequest(BaseModel):

@@ -202,6 +202,13 @@
   #av-spectrum { width:100%; height:48px; background:#0c0c0e; border-radius:6px; display:block; }
   #av-state { color:var(--text-dim); font-size:10px; margin-top:6px; }
   .privacy-note { border-left:2px solid var(--green); padding-left:8px; margin-top:8px; }
+  #feedback-panel { position:fixed; right:16px; bottom:16px; width:min(420px,calc(100vw - 32px)); max-height:72vh; overflow:auto; z-index:20; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 14px 44px #0009; padding:14px; display:none; }
+  #feedback-panel.open { display:block; }
+  #feedback-panel h3 { font-size:14px; margin-bottom:10px; }
+  #feedback-panel input,#feedback-panel textarea,#feedback-panel select { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:8px; margin:4px 0; font:12px var(--font); }
+  #feedback-panel textarea { min-height:90px; resize:vertical; }
+  #feedback-items { max-height:180px; overflow:auto; margin-top:8px; }
+  .feedback-item { border-top:1px solid var(--border); padding:7px 2px; font-size:11px; white-space:pre-wrap; }
   @media(max-width:760px) { #workbench-grid { grid-template-columns:1fr; } #workbench { padding:9px 12px; } }
 </style>
 </head>
@@ -324,6 +331,7 @@
         <span class="hint-chip" onclick="suggest('@status')">@status</span>
         <span class="hint-chip" onclick="suggest('@ingest ')">@ingest</span>
         <span class="hint-chip" onclick="cycleProvider()">Switch provider</span>
+        <span class="hint-chip" onclick="toggleFeedback()">Agent feedback</span>
       </div>
       <div id="input-box">
         <textarea id="message-input" rows="1" placeholder="Message Arc…"
@@ -338,6 +346,19 @@
   </main>
 </div>
 
+<section id="feedback-panel" aria-label="Agent feedback panel" aria-live="polite">
+  <h3>Agent feedback · local Arc inbox</h3>
+  <form id="feedback-form">
+    <input id="feedback-agent" maxlength="80" placeholder="Agent name (e.g. Claude)" required>
+    <input id="feedback-project" maxlength="120" value="general" placeholder="Project">
+    <select id="feedback-kind"><option>observation</option><option>question</option><option>suggestion</option><option>issue</option></select>
+    <textarea id="feedback-message" maxlength="8000" placeholder="Share a finding, question, or handoff…" required></textarea>
+    <div class="av-actions"><button type="submit">Save feedback</button><button type="button" onclick="loadFeedback()">Refresh inbox</button><button type="button" onclick="toggleFeedback(false)">Close</button></div>
+    <div id="feedback-state" role="status"></div>
+  </form>
+  <div id="feedback-items"></div>
+</section>
+
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 const PROVIDERS = ['LOCAL', 'NEXOS', 'XAI'];
@@ -348,6 +369,36 @@ let isStreaming = false;
 let conversations = [];
 let currentConvId = null;
 let statusInterval = null;
+function toggleFeedback(force) {
+  const panel = document.getElementById('feedback-panel');
+  panel.classList.toggle('open', force === undefined ? !panel.classList.contains('open') : force);
+  if (panel.classList.contains('open')) loadFeedback();
+}
+async function loadFeedback() {
+  const target = document.getElementById('feedback-items');
+  try {
+    const response = await fetch('/api/feedback?limit=50');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not load feedback');
+    target.replaceChildren();
+    for (const item of data.items || []) {
+      const row = document.createElement('div'); row.className = 'feedback-item';
+      row.textContent = `${new Date(item.created_at * 1000).toLocaleString()} · ${item.agent} · ${item.project} · ${item.kind}\n${item.message}`;
+      target.appendChild(row);
+    }
+    if (!target.childElementCount) target.textContent = 'No feedback yet.';
+  } catch (error) { target.textContent = error.message; }
+}
+document.getElementById('feedback-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const state = document.getElementById('feedback-state'); state.textContent = 'Saving…';
+  const body = {agent:document.getElementById('feedback-agent').value, project:document.getElementById('feedback-project').value || 'general', kind:document.getElementById('feedback-kind').value, message:document.getElementById('feedback-message').value};
+  try {
+    const response = await fetch('/api/feedback', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not save feedback');
+    document.getElementById('feedback-message').value = ''; state.textContent = 'Saved to the local Arc feedback journal.'; await loadFeedback();
+  } catch(error) { state.textContent = error.message; }
+});
 let avStream = null;
 let avContext = null;
 let avFrame = 0;
