@@ -79,14 +79,13 @@ The final NDA should name the actual legal parties, purpose, permitted users, ex
 
 1. API keys and recovery credentials are not inserted in this agreement, website, Git, ordinary Drive folders or public logs. A lawful account owner controls external model-provider credentials. Provider fallback may be enabled only after key rotation, least-privilege review, spend limits and access logging.
 2. Personal or customer information is processed only on an identified lawful basis with retention, access and incident procedures. No body-camera, microphone, biometric, voiceprint or location collection is authorised by this contract; those require a separate privacy and consent assessment.
-3. VPS or web deployment requires an encrypted, verified backup and a documented rollback. Production DNS, payment, Shopify inventory, customer records and email are separate systems and must not be changed as a side effect of a code release.
+3. VPS or web deployment requires an encrypted, verified backup and a documented rollback. Production DNS, payment, inventory, customer records and email are separate systems and must not be changed as a side effect of a code release.
 
 ## 9. Proposed business and registered addresses
 
 1. **Bangladesh operating/contact address supplied by Party A for business paperwork:** [CONFIDENTIAL BANGLADESH BUSINESS ADDRESS — supplied separately to counsel]. Party A confirms this address is provided for business purposes and is also a residence/occasional place of stay. This draft records it as a proposed operational/contact address only; it does not by itself establish that it meets a particular entity’s registered-office rules or authorise publication on a website. Before filing, Bangladesh counsel must confirm the correct address format, evidence/consent requirements, address disclosure and service-of-process consequences. The parties understand that registry filings may make some address details publicly searchable.
 2. A Bangladesh partnership application requires, among other particulars, the firm’s principal place of business and partners’ full names and permanent addresses; each signer verifies the statement. A Bangladesh partnership also carries substantial partner liability, and a partner can bind the firm in ordinary business. Registration and enforceability consequences should be checked with local counsel before trading.
 3. **UK registered office:** If the parties choose a UK company or LLP, it must have a registered office meeting the relevant UK jurisdiction and service requirements. The Bangladesh address above is not assumed to qualify. Choose a UK address only with a lawful right to use it and proper mail handling.
-4. The current Evolution Vapes public contact page lists 127 Higher Parr Street, St Helens, Merseyside WA9 1DA; Companies House lists North West Vaping Supplies Limited at that registered office. It is a third party’s address. **This draft grants no right to use it.** Obtain written consent from its owner/occupier and verify mail handling before using it for Billo Tech, Companies House, HMRC, contracts or the website. Do not copy any address into the public website unless the parties separately approve publication.
 
 ## 10. Term, mutual buyout, business sale and dissolution
 
@@ -169,8 +168,6 @@ Stephensons Solicitors LLP advertises commercial and partnership-agreement work 
 - GOV.UK, Companies House identity verification roles and deadlines: <https://www.gov.uk/guidance/when-you-need-to-verify-your-identity-for-companies-house>
 - GOV.UK, identity evidence and ACSP verification routes: <https://www.gov.uk/guidance/verify-your-identity-for-companies-house>
 - GOV.UK, LLP members and identity verification: <https://www.gov.uk/government/publications/limited-liability-partnership-incorporation-and-names/limited-liability-partnerships-incorporation-and-names>
-- Evolution Vapes public location list: <https://evolutionvapes.co.uk/pages/contact-us>
-- Companies House record for North West Vaping Supplies Limited: <https://find-and-update.company-information.service.gov.uk/company/09550074>
 - Stephensons commercial solicitors, St Helens: <https://www.stephensons.co.uk/site/businesses/srvcommercial/commercial-solicitors-st-helens/>
 - SRA firm record, Stephensons Solicitors LLP: <https://www.sra.org.uk/consumers/register/organisation/?sraNumber=449153>
 - Notary is not ordinarily part of UK company formation; consult a regulated notary only for a particular document/formality: <https://www.regulated-professions.service.gov.uk/professions/notary-public>

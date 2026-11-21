@@ -94,6 +94,31 @@ hardware. It can provide a checklist and explicit status transitions only.
 - **Workstation monitor:** publish service heartbeat and recovery status; never
   infer that an agent has read a notice from mere delivery to a webhook.
 
+### Shared workstation pointer
+
+Arc sometimes needs to move the visible pointer to show a screen detail. The
+current GNOME session has one pointer, so it cannot provide a second independent
+cursor. When Arc needs UI control, it should request a short, visible control
+lease instead of silently taking over:
+
+- Show a desktop notification before control begins: “Arc is working on the
+  workstation UI.” Include the task and a **Give me control** action.
+- While the lease is active, mark Arc's pointer with a distinct halo/color and
+  show a persistent desktop status with a countdown and **Stop Arc control**.
+- Any human mouse or keyboard input immediately cancels the lease and returns
+  control to the user. Arc may ask for a new lease later; it must not steal
+  control back automatically.
+- End the lease on task completion, timeout, screen lock, or session change, and
+  report the result through the desktop notification and Dispatch journal.
+- Prefer app APIs, keyboard navigation, or command-line operations when they
+  can complete the task. Pointer control remains available for visual work that
+  benefits from showing the user exactly what Arc is inspecting.
+
+The local desktop notification is the first supported alert. A phone or laptop
+alert requires a configured notification adapter; delivery must be recorded as
+pending, delivered, or failed, and must never be represented as a guaranteed
+message to another device without acknowledgement.
+
 MCP alone cannot force a notice into another product's open chat window. Some
 clients may only see Dispatch when a session asks the MCP server for it. For
 those clients, use notifications and make the current outage summary available
@@ -130,6 +155,8 @@ as a startup context resource.
 5. Disconnect the client network and confirm the UI distinguishes a local
    queued message from a server-confirmed event.
 6. Restore from an encrypted backup and verify event IDs, ordering, and hashes.
+7. While Arc holds a UI-control lease, move the human mouse and confirm that
+   Arc immediately yields control and the desktop records the handoff.
 
 Until these checks pass and the service is deployed, the supported procedure is
 to use the private GitHub Issues board described above and explicitly confirm
