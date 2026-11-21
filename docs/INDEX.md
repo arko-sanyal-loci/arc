@@ -171,3 +171,7 @@ SQLite at `data/arc.db` with WAL journal mode.
 
 Floor: `ALPHA = 0.0500` (Constant of Hope — heat never reaches 0).  
 Ceiling: `H_MAX = 0.9999` (sovereignty exception — `pinned=True` nodes are never migrated).
+# Operations
+
+- [Dispatch](DISPATCH.md) — design for an always-available maintenance and
+  incident journal shared through a VPS UI, Arc, and connected IDE agents.
