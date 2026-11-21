@@ -32,8 +32,14 @@ may pass `min_similarity` to tune precision versus recall and should inspect the
 returned source references before using a match.
 
 Arc exposes the same operations to connected local MCP clients as
-`arc_stream_index` and `arc_stream_search`. Indexing remains a separate explicit
-agent action; opening the A/V preview does not send media to the index.
+`arc_stream_index` and `arc_stream_search`. Ordinary indexing remains an
+explicit agent action. The separately user-started A/V capture flow locally
+transcribes short microphone chunks, samples camera frames, runs Garena motion
+and detail-tile selection, and asks the workstation Qwen-VL model to describe
+the selected image regions. Raw media stays transient. On Stop, derived
+transcripts, scene summaries, motion coordinates, and timestamps are appended
+to this journal with `explicit_opt_in` consent, then included in the encrypted
+memory sync. The A/V preview remains off until the user starts it.
 
 On the workstation, Arc uses local Ollama at `http://127.0.0.1:11435/api/embed`
 first. The local Nomic model reports 768 dimensions and about 336 MB resident in
@@ -46,20 +52,20 @@ exposed publicly.
 
 The VPS has CPU-only inference (two vCPU and 7.7 GiB RAM); it hosts a compact
 embedding endpoint but does not provide GPU token offload. The workstation
-uses its GPU-resident local Nomic model for embedding operations. Audio/video
-feature extraction and model KV/token offload are separate work; the current
-semantic index does not yet offload model tokens or extract A/V features. Do
-not bind either Ollama endpoint to a public interface.
+uses its GPU-resident local Nomic model for embedding and Qwen-VL for local
+frame analysis. The A/V panel uses local faster-whisper on CPU for speech
+transcription. Model KV/token offload and the proposed TRS cross-GPU scheduler
+remain separate work. Do not bind either Ollama endpoint to a public interface.
 
 ## Stream/TRS status
 
 TRS still describes the proposed cross-GPU stream/relevance runtime; that part
-is not deployed. Arc now has a Nomic semantic index for explicitly submitted
-text segments and metadata, but does not yet extract transcripts, vision
-descriptions, or motion features from audio/video. The browser A/V workbench
-shows a user-started local preview; it does not send camera/microphone content
-to the model. No automatic device recording is enabled. Evidence intake
-processes only files the user places in `~/Downloads/Evidence-Intake`.
+is not deployed. Arc has a Nomic semantic index for explicitly submitted text
+segments and metadata, plus a separate opt-in local A/V path that extracts
+transcripts, vision descriptions, and motion features. A/V-derived summaries
+enter the semantic journal only when the user stops the capture session. No
+automatic device recording is enabled. Evidence intake processes only files
+the user places in `~/Downloads/Evidence-Intake`.
 
 The semantic journal is included in the existing private memory sync as a
 SQLite-consistent snapshot, encrypted with age before it is versioned in the
@@ -68,11 +74,12 @@ to the coordination bus: agents explicitly call `arc_stream_index` for a
 consented transcript/metadata segment or task delta. See the [Director delta,
 heartbeat, and clock-safety design](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE/blob/main/docs/DIRECTOR-DELTA-AND-TIME.md).
 
-GPU execution beyond the local embedding call is separate from this vector
-index. No TRS cross-GPU scheduler or A/V-to-vector pipeline is wired to this
-endpoint. Keep indexing and GPU work observable and cancellable. Never infer identity,
-emotion, or a personal profile from voice/video unless the user has explicitly
-enabled a narrowly scoped, documented feature.
+The local A/V path is wired to this versioned vector index through a
+user-started session's derived text and metadata. No TRS cross-GPU scheduler or
+multi-agent live-delta bus is deployed. Keep indexing and GPU work observable
+and cancellable. Never infer identity, emotion, or a personal profile from
+voice/video unless the user has explicitly enabled a narrowly scoped,
+documented feature.
 
 ## Validation and launch
 
