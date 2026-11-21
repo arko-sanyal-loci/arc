@@ -38,11 +38,22 @@ incorporated or contract signed.
 - A later read-only V4L2 capability check found `/dev/video1` is the frame
   capture node and `/dev/video2` is metadata-only. The monitor and desktop
   overlay now exclude metadata-only nodes; a restarted monitor reports only
-  `/dev/video1`. Three microphone inputs are detected, all `SUSPENDED`, and no
-  active capture process is running. VPS telemetry sequence 1050 was accepted
-  after this correction. This verifies device inventory and telemetry delivery,
-  not live audio/video capture or an end-to-end evidence intake with
+  `/dev/video1`. A one-frame local GStreamer test then decoded the connected
+  camera at 1280×960 to a discard sink; no image file was created. The capture
+  page now requests up to 1080p and forwards frames up to 1280 pixels wide,
+  preserving aspect ratio. Three microphone inputs are detected, all
+  `SUSPENDED`; no browser capture session or evidence intake is active. VPS
+  telemetry sequence 1050 was accepted after the inventory correction. This
+  verifies the direct UVC frame path and the monitor inventory, not browser
+  permission, microphone capture, or end-to-end evidence intake with
   user-supplied media.
+- The connected USB camera enumerates as a generic UVC device. No DJI Osmo
+  device appeared in the workstation USB inventory at this check. DJI lists
+  Wi-Fi 6 at 2.4/5 GHz and BLE 5.1 for Osmo 360 connectivity, and describes
+  USB file transfer; DJI's current webcam compatibility list names selected
+  Action/Pocket models but not Osmo 360. Thus wireless connectivity alone does
+  not establish a live webcam feed, and Osmo 360 UVC compatibility remains
+  unverified.
 - Provider credentials were removed from the tracked `config/arc_config.yaml`
   and the persistent Arc service now accepts keys from the owner-only
   `~/.config/loci/arc-provider-keys.env`. That file is empty until the owner
@@ -146,6 +157,9 @@ review-only placeholder, not the former store-link concept.
 
 - [Bangladesh Government Press: official Gazette listing for Act 91 of 2026](https://www.dpp.gov.bd/bgpress/bangla/index.php/document/get_extraordinary/61244)
 - [Act 91 of 2026, unofficial English translation of the Gazette](https://assets.tobaccocontrollaws.org/uploads/legislation/Bangladesh/Bangladesh-TC-Amdt.-Act-2026.pdf)
+- [DJI Osmo 360 specifications](https://www.dji.com/360/specs)
+- [DJI Osmo 360 FAQ](https://www.dji.com/360/faq)
+- [DJI webcam compatibility guide](https://repair.dji.com/help/content?customId=en-us03400006962&documentType=artical&lang=en&paperDocType=paper&re=US&spaceId=34)
 - [Hostinger: download a website backup](https://www.hostinger.com/support/5981435-how-to-download-backups-at-hostinger/)
 - [Loyverse Marketplace: Shopify by SKUPlugs](https://loyverse.com/marketplace/shopify-skuplugs)
 - [Loyverse: connect apps from the marketplace](https://help.loyverse.com/help/connect-apps-from-marketplace)
