@@ -52,8 +52,11 @@ incorporated or contract signed.
   Wi-Fi 6 at 2.4/5 GHz and BLE 5.1 for Osmo 360 connectivity, and describes
   USB file transfer; DJI's current webcam compatibility list names selected
   Action/Pocket models but not Osmo 360. Thus wireless connectivity alone does
-  not establish a live webcam feed, and Osmo 360 UVC compatibility remains
-  unverified.
+  not establish a direct webcam feed, and Osmo 360 UVC compatibility remains
+  unverified. DJI separately documents 1080p single-lens livestreaming through
+  DJI Mimo, including RTMP. That may provide an ingest route if an RTMP receiver
+  is configured and the camera/phone is pointed at it; no such receiver or
+  Osmo-to-Arc connection is currently configured.
 - Provider credentials were removed from the tracked `config/arc_config.yaml`
   and the persistent Arc service now accepts keys from the owner-only
   `~/.config/loci/arc-provider-keys.env`. That file is empty until the owner
@@ -160,6 +163,7 @@ review-only placeholder, not the former store-link concept.
 - [DJI Osmo 360 specifications](https://www.dji.com/360/specs)
 - [DJI Osmo 360 FAQ](https://www.dji.com/360/faq)
 - [DJI webcam compatibility guide](https://repair.dji.com/help/content?customId=en-us03400006962&documentType=artical&lang=en&paperDocType=paper&re=US&spaceId=34)
+- [DJI Mimo livestream guide](https://repair.dji.com/help/content?customId=en-us03400006728&lang=en&paperDocType=paper&re=US&spaceId=34)
 - [Hostinger: download a website backup](https://www.hostinger.com/support/5981435-how-to-download-backups-at-hostinger/)
 - [Loyverse Marketplace: Shopify by SKUPlugs](https://loyverse.com/marketplace/shopify-skuplugs)
 - [Loyverse: connect apps from the marketplace](https://help.loyverse.com/help/connect-apps-from-marketplace)
