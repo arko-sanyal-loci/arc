@@ -29,6 +29,13 @@ incorporated or contract signed.
   inputs, but no active capture process was running. Device counts are
   inventory only: audio/video streaming and the consented evidence flow have
   not been verified end to end with user-supplied media.
+- Provider credentials were removed from the tracked `config/arc_config.yaml`
+  and the persistent Arc service now accepts keys from the owner-only
+  `~/.config/loci/arc-provider-keys.env`. That file is empty until the owner
+  adds real keys. A read-only xAI model-list request rejected the previously
+  configured value as invalid; a Nexos model-list request returned HTTP 403,
+  which does not establish whether its key or the network edge caused the
+  rejection. Neither external inference fallback is verified as usable.
 - The static Billo page does not establish that a Billo company, production
   API, worker, or integrated Billo memory platform exists. Those remain
   outstanding.
