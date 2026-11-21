@@ -98,8 +98,11 @@ hardware. It can provide a checklist and explicit status transitions only.
 
 Arc sometimes needs to move the visible pointer to show a screen detail. The
 current GNOME session has one pointer, so it cannot provide a second independent
-cursor. When Arc needs UI control, it should request a short, visible control
-lease instead of silently taking over:
+cursor. Arc may take a short, visible control lease automatically after a
+configurable period of workstation idleness, so the user does not have to stop
+and approve routine work. If the user is active, Arc must ask before taking
+control. Idle detection should use only the desktop's idle state; it must not
+record typed text or the contents of pointer activity.
 
 - Show a desktop notification before control begins: “Arc is working on the
   workstation UI.” Include the task and a **Give me control** action.
@@ -157,6 +160,8 @@ as a startup context resource.
 6. Restore from an encrypted backup and verify event IDs, ordering, and hashes.
 7. While Arc holds a UI-control lease, move the human mouse and confirm that
    Arc immediately yields control and the desktop records the handoff.
+8. Leave the workstation idle past its configured threshold and confirm Arc can
+   start a lease after showing the notification, without a user click.
 
 Until these checks pass and the service is deployed, the supported procedure is
 to use the private GitHub Issues board described above and explicitly confirm
