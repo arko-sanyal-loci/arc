@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
 import hashlib
 import hmac
 import io
@@ -40,30 +41,38 @@ _whisper = None
 _whisper_lock = threading.Lock()
 
 
-def _db() -> sqlite3.Connection:
+@contextmanager
+def _db():
     DATA_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(DATA_DIR, 0o700)
     conn = sqlite3.connect(DB_PATH, timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=FULL")
-    conn.execute("""CREATE TABLE IF NOT EXISTS journal (
-        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id TEXT NOT NULL UNIQUE,
-        created_at REAL NOT NULL,
-        event_type TEXT NOT NULL,
-        actor TEXT NOT NULL,
-        payload BLOB NOT NULL,
-        encrypted INTEGER NOT NULL,
-        previous_hash TEXT NOT NULL,
-        record_hash TEXT NOT NULL
-    )""")
-    conn.execute("""CREATE TRIGGER IF NOT EXISTS journal_no_update
-        BEFORE UPDATE ON journal BEGIN SELECT RAISE(ABORT,'append-only journal'); END""")
-    conn.execute("""CREATE TRIGGER IF NOT EXISTS journal_no_delete
-        BEFORE DELETE ON journal BEGIN SELECT RAISE(ABORT,'append-only journal'); END""")
-    conn.commit()
-    os.chmod(DB_PATH, 0o600)
-    return conn
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=FULL")
+        conn.execute("""CREATE TABLE IF NOT EXISTS journal (
+            sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL UNIQUE,
+            created_at REAL NOT NULL,
+            event_type TEXT NOT NULL,
+            actor TEXT NOT NULL,
+            payload BLOB NOT NULL,
+            encrypted INTEGER NOT NULL,
+            previous_hash TEXT NOT NULL,
+            record_hash TEXT NOT NULL
+        )""")
+        conn.execute("""CREATE TRIGGER IF NOT EXISTS journal_no_update
+            BEFORE UPDATE ON journal BEGIN SELECT RAISE(ABORT,'append-only journal'); END""")
+        conn.execute("""CREATE TRIGGER IF NOT EXISTS journal_no_delete
+            BEFORE DELETE ON journal BEGIN SELECT RAISE(ABORT,'append-only journal'); END""")
+        conn.commit()
+        os.chmod(DB_PATH, 0o600)
+        yield conn
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def _append_event(event_type: str, actor: str, payload: dict, *, encrypt: bool) -> dict:
