@@ -12,18 +12,22 @@ automatically treated as a verified fact or ingested into long-term memory.
 
 ## Semantic stream index
 
-The VPS runs Ollama bound to `127.0.0.1:11434` with `nomic-embed-text`. Agents
-should use `/api/embed` with an explicit task prefix, persist vectors with model
-and source-version metadata, and retrieve source references before making a
-claim. Keep source IDs, timestamps, consent scope, and content hashes alongside
-each vector. Rebuild the index when the source text or embedding model changes.
+The VPS runs Ollama bound to `127.0.0.1:11434` with `nomic-embed-text`. From a
+VPS shell, agents can POST to `/api/embed` with
+`{"model":"nomic-embed-text","input":"search_query: ..."}` for retrieval
+queries and `search_document: ...` when indexing documents. Persist vectors
+with model and source-version metadata, then retrieve source references before
+making a claim. Keep source IDs, timestamps, consent scope, and content hashes
+alongside each vector. Rebuild the index when source text or model changes.
 Never put raw private media in the public Git repository.
 
 The VPS has CPU-only inference (two vCPU and 7.7 GiB RAM); it hosts a compact
 embedding endpoint but does not provide GPU token offload. Workstation RTX/Arc
 execution remains the candidate for GPU-heavy embedding batches, audio/video
-feature extraction, or model KV/token offload. Route only through a private,
-authenticated tunnel. Do not bind Ollama to a public interface.
+feature extraction, or model KV/token offload. No private authenticated
+workstation-to-VPS tunnel is configured yet, so workstation agents cannot call
+the VPS endpoint. Add a private tunnel before enabling remote access. Do not
+bind Ollama to a public interface.
 
 ## Stream/TRS status
 
