@@ -839,7 +839,11 @@ function pollStatus() {
     .then(data => {
       const dot = (name, id) => {
         const h = data[name] || {};
-        document.getElementById(id).className = `dot ${h.reachable ? 'green' : 'red'}`;
+        const ready = h.api_ready;
+        const el = document.getElementById(id);
+        el.className = `dot ${ready ? 'green' : 'red'}`;
+        el.title = ready ? `${name}: API ready` : `${name}: ${h.error || 'not ready'}`;
+        el.setAttribute('aria-label', el.title);
       };
       dot('LOCAL', 'local-dot');
       dot('NEXOS', 'nexos-dot');

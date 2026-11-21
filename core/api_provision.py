@@ -149,6 +149,8 @@ class APIKeys:
 class ProviderHealth:
     provider:       Provider
     reachable:      bool  = False
+    credential_configured: bool = False
+    api_ready:      bool  = False
     latency_ms:     float = 0.0
     last_checked:   float = field(default_factory=time.time)
     error:          str   = ""
@@ -177,18 +179,28 @@ async def _ping_provider(
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
             latency = (time.monotonic() - t0) * 1000
-            ok = resp.status in (200, 401)   # 401 = key invalid but endpoint alive
+            key_configured = bool(key) if provider in (Provider.NEXOS, Provider.XAI) else True
+            ok = resp.status in (200, 401)   # 401 means endpoint answered, not authorized inference
+            api_ready = resp.status == 200 and key_configured
+            error = "" if api_ready else (
+                "API key not configured" if provider in (Provider.NEXOS, Provider.XAI)
+                and not key_configured else f"HTTP {resp.status}"
+            )
             return ProviderHealth(
                 provider=provider,
                 reachable=ok,
+                credential_configured=key_configured,
+                api_ready=api_ready,
                 latency_ms=latency,
                 last_checked=time.time(),
-                error="" if ok else f"HTTP {resp.status}",
+                error=error,
             )
     except Exception as exc:
         return ProviderHealth(
             provider=provider,
             reachable=False,
+            credential_configured=bool(key) if provider in (Provider.NEXOS, Provider.XAI) else True,
+            api_ready=False,
             latency_ms=(time.monotonic() - t0) * 1000,
             last_checked=time.time(),
             error=str(exc),
@@ -210,6 +222,8 @@ async def health_check_all(keys: APIKeys) -> dict[Provider, ProviderHealth]:
         Path(HEALTH_PATH).write_text(json.dumps({
             p.name: {
                 "reachable":    h.reachable,
+                "credential_configured": h.credential_configured,
+                "api_ready": h.api_ready,
                 "latency_ms":   round(h.latency_ms, 1),
                 "last_checked": h.last_checked,
                 "error":        h.error,

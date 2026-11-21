@@ -280,6 +280,8 @@ async def health():
     return {
         p.name: {
             "reachable":  ph.reachable,
+            "credential_configured": ph.credential_configured,
+            "api_ready": ph.api_ready,
             "latency_ms": round(ph.latency_ms, 1),
             "error":      ph.error,
         }

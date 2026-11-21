@@ -45,6 +45,12 @@
 | `POST` | `/api/memory/ingest` | `memory_ingest()` | Ingest document into Loci; body: `IngestRequest` |
 | `POST` | `/mcp` | `mcp_endpoint()` | MCP JSON-RPC dispatch |
 
+`/api/health` reports both endpoint reachability and `api_ready`. The external
+Nexos and xAI providers are ready only when a credential is configured and the
+provider accepts the model-list request; a reachable endpoint without a key is
+not reported as usable inference. The chat UI uses `api_ready` for provider
+status dots.
+
 ### Request / Response shapes
 
 **`ChatRequest`**
