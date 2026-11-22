@@ -27,6 +27,7 @@ if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") == "1":
     from challenge_store import ChallengeStore
     from credential_store import CredentialStore
     from passkeys import Passkeys
+    from recovery_store import RecoveryStore
 
 
 ROOT = Path(__file__).resolve().parent
@@ -47,18 +48,20 @@ _whisper = None
 _whisper_lock = threading.Lock()
 _passkeys = None
 _credentials = None
+_recovery = None
 _sessions: dict[str, float] = {}
 _passkey_attempts: list[float] = []
 
 
 def _passkey_services():
-    global _passkeys, _credentials
+    global _passkeys, _credentials, _recovery
     if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
         return None, None
     with _auth_lock:
         if _passkeys is None:
             DATA_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
             _credentials = CredentialStore(DATA_DIR / "passkey-credentials.sqlite3")
+            _recovery = RecoveryStore(DATA_DIR / "passkey-recovery.sqlite3")
             challenges = ChallengeStore(DATA_DIR / "passkey-challenges.sqlite3")
             _passkeys = Passkeys(challenges, "billo.tech", "https://billo.tech")
         return _passkeys, _credentials
@@ -373,6 +376,33 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
+        if path in {"/arko/chat/api/recovery/create", "/arko/chat/api/recovery/use"}:
+            if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
+                return self._send(404, {"error": "not found"})
+            if self.headers.get("Origin") != "https://billo.tech":
+                return self._send(403, {"error": "origin rejected"})
+            now = time.monotonic()
+            with _auth_lock:
+                _passkey_attempts[:] = [t for t in _passkey_attempts if t > now - 60]
+                if len(_passkey_attempts) >= 30:
+                    return self._send(429, {"error": "try again later"})
+                _passkey_attempts.append(now)
+            try:
+                payload = self._body()
+                _passkey_services()
+                if path.endswith("/create"):
+                    basic = _basic_user(self.headers.get("Authorization", ""))
+                    if not basic or not hmac.compare_digest(basic[0].encode(), CHAT_USERNAME.encode()) or not _scrypt_matches(basic[1]):
+                        return self._send(403, {"error": "password confirmation required"})
+                    return self._send(200, {"codes": _recovery.replace()})
+                if not _recovery.consume(payload.get("code")):
+                    return self._send(400, {"error": "recovery failed"})
+                token = secrets.token_urlsafe(32)
+                with _auth_lock:
+                    _sessions[hashlib.sha256(token.encode()).hexdigest()] = time.monotonic() + 900
+                return self._send(200, {"status": "authenticated"}, cookie=f"arc_session={token}; Path=/arko/chat; Max-Age=900; Secure; HttpOnly; SameSite=Strict")
+            except Exception:
+                return self._send(400, {"error": "recovery failed"})
         if path in {"/arko/chat/api/passkeys/login/options", "/arko/chat/api/passkeys/login/verify"}:
             if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
                 return self._send(404, {"error": "not found"})

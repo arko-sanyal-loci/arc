@@ -116,6 +116,27 @@ class PasskeyHTTPTests(unittest.TestCase):
         status, _, _ = request(prefix+'login/verify', {'id': data['id'], 'credential': assertion})
         self.assertEqual(status, 400)
 
+    def test_recovery_code_is_single_use_and_cannot_create_codes(self):
+        path = '/arko/chat/api/recovery/create'
+        status, body = self.post(path, 'https://billo.tech', b'arko:correct')
+        self.assertEqual(status, 200)
+        code = json.loads(body)['codes'][0]
+        def use():
+            c = http.client.HTTPConnection('127.0.0.1', self.http.server_port)
+            c.request('POST', '/arko/chat/api/recovery/use', json.dumps({'code': code}), {'Content-Type':'application/json', 'Origin':'https://billo.tech'})
+            r = c.getresponse()
+            status, cookie = r.status, r.getheader('Set-Cookie')
+            r.read(); c.close()
+            return status, cookie
+        status, cookie = use()
+        self.assertEqual(status, 200)
+        self.assertEqual(use()[0], 400)
+        c = http.client.HTTPConnection('127.0.0.1', self.http.server_port)
+        c.request('POST', path, '{}', {'Content-Type':'application/json', 'Origin':'https://billo.tech', 'Cookie':cookie.split(';')[0]})
+        r = c.getresponse()
+        self.assertEqual(r.status, 403)
+        r.read(); c.close()
+
     def test_disabled_feature_returns_not_found(self):
         os.environ['ARC_CHAT_PASSKEYS_ENABLED'] = '0'
         try:
