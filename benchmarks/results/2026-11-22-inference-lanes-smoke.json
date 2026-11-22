@@ -1,0 +1,120 @@
+{
+  "schema": "loci.inference-lane-benchmark.v1",
+  "started_at": "2026-11-22T00:54:00.577259+00:00",
+  "model": "qwen3.5:4b-q4_K_M",
+  "prompt": "Write a concise 30-word explanation of why stable backups matter for software projects.",
+  "max_tokens": 48,
+  "trial_count": 3,
+  "telemetry_note": "API timing is measured. GPU utilization is not collected by this script; intel_gpu_top requires CAP_PERFMON on this workstation.",
+  "lanes": {
+    "arc": {
+      "url": "http://127.0.0.1:8000",
+      "passed": 3,
+      "failed": 0,
+      "median_wall_ms": 329.8,
+      "median_generation_tokens_per_second": 103.71,
+      "trials": [
+        {
+          "ok": true,
+          "wall_ms": 330.3,
+          "prompt_tokens": 29,
+          "prompt_ms": 38.3,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 289.4,
+          "generation_tokens_per_second": 103.68,
+          "load_ms": 0.4
+        },
+        {
+          "ok": true,
+          "wall_ms": 329.5,
+          "prompt_tokens": 29,
+          "prompt_ms": 37.7,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 288.9,
+          "generation_tokens_per_second": 103.85,
+          "load_ms": 0.6
+        },
+        {
+          "ok": true,
+          "wall_ms": 329.8,
+          "prompt_tokens": 29,
+          "prompt_ms": 36.7,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 289.3,
+          "generation_tokens_per_second": 103.71,
+          "load_ms": 0.5
+        }
+      ]
+    },
+    "rtx": {
+      "url": "http://127.0.0.1:11435",
+      "passed": 3,
+      "failed": 0,
+      "median_wall_ms": 315.3,
+      "median_generation_tokens_per_second": 110.15,
+      "trials": [
+        {
+          "ok": true,
+          "wall_ms": 314.3,
+          "prompt_tokens": 29,
+          "prompt_ms": 38.6,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 272.3,
+          "generation_tokens_per_second": 110.17,
+          "load_ms": 0.7
+        },
+        {
+          "ok": true,
+          "wall_ms": 316.0,
+          "prompt_tokens": 29,
+          "prompt_ms": 39.4,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 272.7,
+          "generation_tokens_per_second": 110.01,
+          "load_ms": 0.7
+        },
+        {
+          "ok": true,
+          "wall_ms": 315.3,
+          "prompt_tokens": 29,
+          "prompt_ms": 39.6,
+          "output_tokens": 30,
+          "output_chars": 190,
+          "generation_ms": 272.4,
+          "generation_tokens_per_second": 110.15,
+          "load_ms": 0.5
+        }
+      ]
+    }
+  },
+  "simultaneous": {
+    "arc": {
+      "ok": true,
+      "wall_ms": 340.6,
+      "prompt_tokens": 29,
+      "prompt_ms": 45.6,
+      "output_tokens": 30,
+      "output_chars": 190,
+      "generation_ms": 291.9,
+      "generation_tokens_per_second": 102.77,
+      "load_ms": 0.4
+    },
+    "rtx": {
+      "ok": true,
+      "wall_ms": 317.4,
+      "prompt_tokens": 29,
+      "prompt_ms": 40.5,
+      "output_tokens": 30,
+      "output_chars": 190,
+      "generation_ms": 274.4,
+      "generation_tokens_per_second": 109.35,
+      "load_ms": 0.3
+    }
+  },
+  "finished_at": "2026-11-22T00:54:03.532586+00:00"
+}
