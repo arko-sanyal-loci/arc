@@ -82,6 +82,7 @@ def main() -> int:
     parser.add_argument("--rtx-url", default="http://127.0.0.1:11435")
     parser.add_argument("--trials", type=int, default=5)
     parser.add_argument("--max-tokens", type=int, default=48)
+    parser.add_argument("--prompt", default=PROMPT)
     args = parser.parse_args()
     if args.trials < 1 or args.max_tokens < 1:
         parser.error("--trials and --max-tokens must be positive")
@@ -91,7 +92,7 @@ def main() -> int:
         "schema": "loci.inference-lane-benchmark.v1",
         "started_at": datetime.now(timezone.utc).isoformat(),
         "model": args.model,
-        "prompt": PROMPT,
+        "prompt": args.prompt,
         "max_tokens": args.max_tokens,
         "trial_count": args.trials,
         "telemetry_note": (
@@ -103,13 +104,13 @@ def main() -> int:
 
     try:
         for lane, url in lanes.items():
-            request(url, args.model, PROMPT, args.max_tokens)  # warm-up, excluded
-            rows = [request(url, args.model, PROMPT, args.max_tokens)
+            request(url, args.model, args.prompt, args.max_tokens)  # warm-up, excluded
+            rows = [request(url, args.model, args.prompt, args.max_tokens)
                     for _ in range(args.trials)]
             output["lanes"][lane] = {"url": url, **summarize(rows)}
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             futures = {
-                lane: pool.submit(request, url, args.model, PROMPT, args.max_tokens)
+                lane: pool.submit(request, url, args.model, args.prompt, args.max_tokens)
                 for lane, url in lanes.items()
             }
             output["simultaneous"] = {
