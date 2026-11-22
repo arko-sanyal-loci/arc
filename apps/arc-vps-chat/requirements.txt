@@ -2,3 +2,5 @@
 faster-whisper>=1.1
 av>=14,<19
 numpy>=1.26
+# Required when the passkey service is enabled.
+webauthn==2.7.1
