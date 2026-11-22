@@ -141,9 +141,12 @@ incorporated or contract signed.
   into a separate environment has now been partially tested: on 22 November,
   the SQL dump imported into a disposable, network-isolated MariaDB 11.8.9
   container on the VPS, yielding 27 tables, 3 post rows and 178 option rows.
-  The container and its temporary database were removed after the check. A
-  complete WordPress application restore has not been tested, so full site
-  recoverability is not yet proven. Bangladesh-qualified counsel must still
+  A second isolated restore used the saved site files with the imported
+  database in a network-disabled WordPress/PHP 8.3 container. The homepage
+  returned HTTP 200 and the posts API returned HTTP 200 with one post. The
+  temporary containers and files were removed. This checks basic rendering and
+  database reads, but not every plugin, admin action, or production configuration.
+  Bangladesh-qualified counsel must still
   review the intended page and product category before publication because the
   current law's application to the proposed business page is unresolved.
 
