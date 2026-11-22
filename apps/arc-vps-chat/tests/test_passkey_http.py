@@ -2,6 +2,13 @@
 import base64
 import hashlib
 import http.client
+import json
+import struct
+
+import cbor2
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+from test_passkey_ceremony import b64, client
 import importlib.util
 import os
 from pathlib import Path
@@ -62,6 +69,52 @@ class PasskeyHTTPTests(unittest.TestCase):
         path = '/arko/chat/api/passkeys/login/options'
         self.assertEqual(self.post(path, 'https://evil.example')[0], 403)
         self.assertEqual(self.post(path, 'https://billo.tech')[0], 400)
+
+    def test_signed_enrollment_login_and_session(self):
+        def request(path, payload, auth=None, cookie=None):
+            conn = http.client.HTTPConnection('127.0.0.1', self.http.server_port)
+            headers = {'Content-Type': 'application/json', 'Origin': 'https://billo.tech'}
+            if auth:
+                headers['Authorization'] = 'Basic ' + base64.b64encode(auth).decode()
+            if cookie:
+                headers['Cookie'] = cookie
+            conn.request('POST', path, json.dumps(payload), headers)
+            response = conn.getresponse()
+            status, body, set_cookie = response.status, response.read(), response.getheader('Set-Cookie')
+            conn.close()
+            return status, json.loads(body), set_cookie
+
+        prefix = '/arko/chat/api/passkeys/'
+        key = ec.generate_private_key(ec.SECP256R1())
+        numbers = key.public_key().public_numbers()
+        cose = cbor2.dumps({1: 2, 3: -7, -1: 1, -2: numbers.x.to_bytes(32, 'big'), -3: numbers.y.to_bytes(32, 'big')})
+        credential_id = b'http-test-key'
+        rp_hash = hashlib.sha256(b'billo.tech').digest()
+        status, data, _ = request(prefix+'register/options', {}, b'arko:correct')
+        self.assertEqual(status, 200)
+        client_data = client('webauthn.create', data['options']['challenge'])
+        auth_data = rp_hash + bytes([0x45]) + struct.pack('>I', 0) + bytes(16) + struct.pack('>H', len(credential_id)) + credential_id + cose
+        registration = {'id': b64(credential_id), 'rawId': b64(credential_id), 'type': 'public-key', 'response': {'clientDataJSON': b64(client_data), 'attestationObject': b64(cbor2.dumps({'fmt': 'none', 'authData': auth_data, 'attStmt': {}}))}}
+        status, _, _ = request(prefix+'register/verify', {'id': data['id'], 'credential': registration}, b'arko:correct')
+        self.assertEqual(status, 201)
+        status, data, _ = request(prefix+'login/options', {})
+        self.assertEqual(status, 200)
+        client_data = client('webauthn.get', data['options']['challenge'])
+        auth_data = rp_hash + bytes([0x05]) + struct.pack('>I', 1)
+        signature = key.sign(auth_data + hashlib.sha256(client_data).digest(), ec.ECDSA(hashes.SHA256()))
+        assertion = {'id': b64(credential_id), 'rawId': b64(credential_id), 'type': 'public-key', 'response': {'clientDataJSON': b64(client_data), 'authenticatorData': b64(auth_data), 'signature': b64(signature)}}
+        status, _, cookie = request(prefix+'login/verify', {'id': data['id'], 'credential': assertion})
+        self.assertEqual(status, 200)
+        self.assertIn('HttpOnly', cookie)
+        self.assertIn('Secure', cookie)
+        connection = http.client.HTTPConnection('127.0.0.1', self.http.server_port)
+        connection.request('GET', '/arko/chat', headers={'Cookie': cookie.split(';')[0]})
+        response = connection.getresponse()
+        self.assertEqual(response.status, 200)
+        response.read()
+        connection.close()
+        status, _, _ = request(prefix+'login/verify', {'id': data['id'], 'credential': assertion})
+        self.assertEqual(status, 400)
 
     def test_disabled_feature_returns_not_found(self):
         os.environ['ARC_CHAT_PASSKEYS_ENABLED'] = '0'
