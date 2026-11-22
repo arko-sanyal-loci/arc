@@ -137,8 +137,9 @@ incorporated or contract signed.
   `tar -tzf`. The encrypted workstation snapshot uploaded to the VPS on
   22 November (396,516,931 bytes; SHA-256
   `06b449f5f131f0aee1418fca5767b1f5d164a22ff51d7c5dd53a45828f123df6`)
-  contains both backup archives and was verified after upload. This provides a
-  recoverable pre-replacement copy. Bangladesh-qualified counsel must still
+  contains both backup archives and was verified after upload. A restoration
+  into a separate environment has not been tested, so recoverability is not
+  yet proven. Bangladesh-qualified counsel must still
   review the intended page and product category before publication because the
   current law's application to the proposed business page is unresolved.
 
@@ -156,9 +157,12 @@ incorporated or contract signed.
   the merchant responsible for complying with local law. These constraints do
   not establish that a third-party gateway will accept this product category or
   that local law permits the intended store.
-- No Shopify store was created, no Loyverse app was connected, and no paid
-  integration was activated. Do not migrate the WordPress site or remove its
-  database based on this evaluation.
+- Gmail shows a Shopify sign-in and a “Start setting up your store” email;
+  these do not establish whether a store exists or is active. Loyverse stock
+  notifications show POS activity but do not establish a Shopify connection.
+  Shopify Admin and Loyverse Back Office have not been inspected, and no
+  synchronization or paid integration has been verified. Do not migrate the
+  WordPress site or remove its database based on this evaluation.
 
 ## Bangladesh publication constraint
 
