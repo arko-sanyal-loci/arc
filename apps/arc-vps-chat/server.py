@@ -9,6 +9,7 @@ import hmac
 import io
 import json
 import os
+import secrets
 from pathlib import Path
 import shutil
 import sqlite3
@@ -46,6 +47,8 @@ _whisper = None
 _whisper_lock = threading.Lock()
 _passkeys = None
 _credentials = None
+_sessions: dict[str, float] = {}
+_passkey_attempts: list[float] = []
 
 
 def _passkey_services():
@@ -268,7 +271,7 @@ class Handler(BaseHTTPRequestHandler):
         # Do not log chat bodies, voice payloads, auth headers or tokens.
         return
 
-    def _send(self, status: int, body, content_type: str = "application/json; charset=utf-8"):
+    def _send(self, status: int, body, content_type: str = "application/json; charset=utf-8", cookie: str = ""):
         if isinstance(body, bytes):
             data = body
         else:
@@ -279,10 +282,25 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
         self.end_headers()
         self.wfile.write(data)
 
     def _authorized(self) -> bool:
+        if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") == "1":
+            from http.cookies import SimpleCookie, CookieError
+            try:
+                cookies = SimpleCookie(self.headers.get("Cookie", ""))
+                token = cookies["arc_session"].value if "arc_session" in cookies else ""
+                digest = hashlib.sha256(token.encode()).hexdigest()
+                with _auth_lock:
+                    expiry = _sessions.get(digest, 0)
+                    if expiry > time.monotonic():
+                        return True
+                    _sessions.pop(digest, None)
+            except (CookieError, UnicodeEncodeError):
+                pass
         credential = _basic_user(self.headers.get("Authorization", ""))
         if not credential:
             return False
@@ -324,6 +342,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path = urlsplit(self.path)
+        if path.path == "/arko/chat/login" and os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") == "1":
+            return self._send(200, (ROOT / "login.html").read_bytes(), "text/html; charset=utf-8")
         if path.path in {"/arko/chat", "/arko/chat/"}:
             if not self._require_auth():
                 return
@@ -353,11 +373,47 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
+        if path in {"/arko/chat/api/passkeys/login/options", "/arko/chat/api/passkeys/login/verify"}:
+            if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
+                return self._send(404, {"error": "not found"})
+            if self.headers.get("Origin") != "https://billo.tech":
+                return self._send(403, {"error": "origin rejected"})
+            now = time.monotonic()
+            with _auth_lock:
+                _passkey_attempts[:] = [t for t in _passkey_attempts if t > now - 60]
+                if len(_passkey_attempts) >= 30:
+                    return self._send(429, {"error": "try again later"})
+                _passkey_attempts.append(now)
+            try:
+                payload = self._body()
+                passkeys, credentials = _passkey_services()
+                if path.endswith("/options"):
+                    identifier, options = passkeys.authentication_options(credentials.ids())
+                    return self._send(200, {"id": identifier, "options": options})
+                credential = payload["credential"]
+                encoded = credential["id"]
+                credential_id = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
+                stored = credentials.get(credential_id)
+                if not stored:
+                    raise ValueError("unknown credential")
+                key, counter = stored
+                result = passkeys.verify_authentication(payload["id"], credential, key, counter)
+                if not credentials.update_counter(credential_id, counter, result.new_sign_count):
+                    raise ValueError("credential updated concurrently")
+                token = secrets.token_urlsafe(32)
+                with _auth_lock:
+                    _sessions[hashlib.sha256(token.encode()).hexdigest()] = time.monotonic() + 3600
+                return self._send(200, {"status": "authenticated"}, cookie=f"arc_session={token}; Path=/arko/chat; Max-Age=3600; Secure; HttpOnly; SameSite=Strict")
+            except Exception:
+                return self._send(400, {"error": "authentication failed"})
         if path in {"/arko/chat/api/passkeys/register/options", "/arko/chat/api/passkeys/register/verify"}:
             if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
                 return self._send(404, {"error": "not found"})
             if not self._require_auth():
                 return
+            basic = _basic_user(self.headers.get("Authorization", ""))
+            if not basic or not hmac.compare_digest(basic[0].encode(), CHAT_USERNAME.encode()) or not _scrypt_matches(basic[1]):
+                return self._send(403, {"error": "password confirmation required"})
             if self.headers.get("Origin") != "https://billo.tech":
                 return self._send(403, {"error": "origin rejected"})
             try:
@@ -432,6 +488,8 @@ class Handler(BaseHTTPRequestHandler):
             except (KeyError, TypeError, ValueError, OverflowError, json.JSONDecodeError):
                 return self._send(422, {"error": "invalid sanitized workstation telemetry"})
 
+        if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") == "1" and self.headers.get("Origin") != "https://billo.tech":
+            return self._send(403, {"error": "origin rejected"})
         if not self._require_auth():
             return
         try:
