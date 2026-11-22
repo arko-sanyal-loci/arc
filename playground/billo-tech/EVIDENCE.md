@@ -11,6 +11,11 @@ incorporated or contract signed.
   published source is `playground/billo-tech/index.html` plus `site.css`. The
   page describes Billo Tech as a working research identity and labels
   prototypes and measurement limits.
+- A fresh workstation check on 22 November returned HTTP 200 for the public
+  homepage and `/status`; the public homepage body is byte-for-byte identical
+  to the committed `playground/billo-tech/index.html` (SHA-256
+  `ef0c1530ea78e55c268090318d92deff5c52ec66aa8d8c4e4e6f998983da42b8`). The
+  protected `/arko/chat` returned HTTP 401 without credentials, as expected.
 - On 22 November 2026, the homepage and `/status` returned HTTP 200. The
   protected `/arko/chat` route returned HTTP 401 when checked without a login,
   as expected. The homepage links directly to chat and status.
@@ -78,10 +83,12 @@ incorporated or contract signed.
   belongs to the same business. `evolutionvapes.co.uk` is a separate UK
   franchise and is not the owner's business. Earlier drafts incorrectly
   connected the two; that reference is withdrawn.
-- The live `.com` domain currently returns HTTP 200 and is an active Hostinger
-  WordPress site, but its page is still the generic “Welcome to WordPress”
-  starter page. The local file is a review-only placeholder. No WordPress
-  content has been changed.
+- A fresh check on 22 November returned HTTP 200 over HTTPS. Hostinger lists
+  the domain as an enabled WordPress site at
+  `/home/u770859881/domains/evolutionvapes.com/public_html`. The visible page
+  is the generic “Coming Soon” WordPress page; no WordPress content has been
+  changed. The local branded HTML remains a review-only placeholder and is not
+  ready for publication.
 - A cache-bypassed dynamic request on 22 November still returned the starter
   homepage. WordPress REST API reads returned one published `Hello world!`
   post and no published pages. Search indexing still surfaced older storefront
@@ -105,10 +112,15 @@ incorporated or contract signed.
   Search results surfaced third-party directory copies, which are not treated as
   authoritative. No address, hours, phone number, rating, or review text from
   those directories has been copied into a site draft.
-- Hostinger's API did not expose an operation for downloading a full WordPress
-  files-and-database backup or SQL export. A current recoverable full backup is
-  still required before any homepage replacement; obtain the website archive
-  and database dump through hPanel. Bangladesh-qualified counsel must also
+- A full Hostinger backup was downloaded to
+  `~/Downloads/Backups/EvolutionVapes-Hostinger-2026-11-21/`. It includes
+  `website-files.tar.gz` (79,415,146 bytes) and `database.sql.gz` (20,151
+  bytes), plus a README. The files passed `gzip -t`; the website archive passed
+  `tar -tzf`. The encrypted workstation snapshot uploaded to the VPS on
+  22 November (396,516,931 bytes; SHA-256
+  `06b449f5f131f0aee1418fca5767b1f5d164a22ff51d7c5dd53a45828f123df6`)
+  contains both backup archives and was verified after upload. This provides a
+  recoverable pre-replacement copy. Bangladesh-qualified counsel must still
   review the intended page and product category before publication because the
   current law's application to the proposed business page is unresolved.
 
