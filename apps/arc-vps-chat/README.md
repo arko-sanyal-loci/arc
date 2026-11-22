@@ -64,3 +64,18 @@ The initial deployment authorizes the owner web login and one workstation
 telemetry key. Separate Claude, Gemini, Copilot, and Codex identities still
 need individual credentials and client configuration before those systems can
 read or publish dispatch events.
+
+## Passkey rollout — 2026-11-22
+
+The WebAuthn implementation is deployed on the VPS behind the
+`ARC_CHAT_PASSKEYS_ENABLED=1` systemd drop-in. The existing password route stays
+available at `/arko/chat`; `/arko/chat/login` serves passkey sign-in and recovery.
+The WebAuthn package is pinned in `requirements.txt`. The deployment was backed
+up before replacing application files. Live checks returned 200 for the passkey
+login page and 401 for unauthenticated registration and recovery-code creation,
+which confirms those operations remain behind the existing password check.
+
+Local HTTP tests use a simulated signing key; they do not prove a real device
+enrollment. Owner enrollment and a real passkey sign-in/recovery remain to be
+completed in a browser on billo.tech. Until that is done, retain password
+credentials and store recovery codes offline after creation.
