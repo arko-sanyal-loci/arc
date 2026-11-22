@@ -45,6 +45,14 @@ incorporated or contract signed.
   `0700`, README mode `0600`); the five-minute worker verified the
   three-record journal and found no eligible new files. The fifteen-minute
   encrypted memory sync and twenty-second telemetry timer were active.
+- The 500 MiB Drive-review offload has its file-scoped `locievidence` Google
+  Drive remote and destination configured. The rclone configuration and both
+  worker environment files are mode `0600`; the evidence remote is bound to a
+  private folder and its quota endpoint reports about 3.6 TiB free. The Arc
+  reference token is loaded separately from an owner-only file. Since there
+  are no eligible evidence files, no Drive archive upload or Arc evidence
+  reference was due during this check; that is not an end-to-end media upload
+  test.
 - At 08:31 +06, the weekly workstation backup completed successfully and
   uploaded a 396,516,931-byte encrypted snapshot to the VPS; the weekly timer
   remains enabled. At 08:49 +06, the telemetry timer received VPS acceptance
