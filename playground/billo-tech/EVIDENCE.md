@@ -16,9 +16,6 @@ incorporated or contract signed.
   to the committed `playground/billo-tech/index.html` (SHA-256
   `ef0c1530ea78e55c268090318d92deff5c52ec66aa8d8c4e4e6f998983da42b8`). The
   protected `/arko/chat` returned HTTP 401 without credentials, as expected.
-- On 22 November 2026, the homepage and `/status` returned HTTP 200. The
-  protected `/arko/chat` route returned HTTP 401 when checked without a login,
-  as expected. The homepage links directly to chat and status.
 - Before the landing changes, two dated VPS archives were saved under
   `/var/backups/`: `billo-tech-landing-before-20261122.tar.gz` and
   `billo-tech-landing-before-links-20261122.tar.gz`. They preserve the previous
@@ -40,6 +37,19 @@ incorporated or contract signed.
   intake, and workstation-backup timers were enabled; and systemd user
   lingering was on. These user services can start at boot before an
   interactive login. Media capture itself remains user-started and opt-in.
+- At 08:45 +06 on 22 November, a fresh local Arc status check reported
+  `lane_mask=3` and both inference workers alive. The monitor found no active
+  capture process and three detected microphone sources, all suspended. The
+  camera node is present, but a live browser audio/video session was not
+  verified. `Evidence-Intake` and its README are owner-only (directory mode
+  `0700`, README mode `0600`); the five-minute worker verified the
+  three-record journal and found no eligible new files. The fifteen-minute
+  encrypted memory sync and twenty-second telemetry timer were active.
+- At 08:31 +06, the weekly workstation backup completed successfully and
+  uploaded a 396,516,931-byte encrypted snapshot to the VPS; the weekly timer
+  remains enabled. At 08:49 +06, the telemetry timer received VPS acceptance
+  sequence 1586. These records verify service and transport status at those
+  times, not capture activity or continuous availability.
 - A later read-only V4L2 capability check found `/dev/video1` is the frame
   capture node and `/dev/video2` is metadata-only. The monitor and desktop
   overlay now exclude metadata-only nodes; a restarted monitor reports only
