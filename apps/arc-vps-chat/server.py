@@ -22,6 +22,11 @@ from urllib.parse import parse_qs, urlsplit
 from urllib.request import Request, urlopen
 import uuid
 
+if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") == "1":
+    from challenge_store import ChallengeStore
+    from credential_store import CredentialStore
+    from passkeys import Passkeys
+
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("ARC_CHAT_PORT", "8765"))
@@ -39,6 +44,21 @@ _auth_failures: dict[str, tuple[int, float]] = {}
 _auth_lock = threading.Lock()
 _whisper = None
 _whisper_lock = threading.Lock()
+_passkeys = None
+_credentials = None
+
+
+def _passkey_services():
+    global _passkeys, _credentials
+    if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
+        return None, None
+    with _auth_lock:
+        if _passkeys is None:
+            DATA_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+            _credentials = CredentialStore(DATA_DIR / "passkey-credentials.sqlite3")
+            challenges = ChallengeStore(DATA_DIR / "passkey-challenges.sqlite3")
+            _passkeys = Passkeys(challenges, "billo.tech", "https://billo.tech")
+        return _passkeys, _credentials
 
 
 @contextmanager
@@ -333,6 +353,25 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlsplit(self.path).path
+        if path in {"/arko/chat/api/passkeys/register/options", "/arko/chat/api/passkeys/register/verify"}:
+            if os.environ.get("ARC_CHAT_PASSKEYS_ENABLED") != "1":
+                return self._send(404, {"error": "not found"})
+            if not self._require_auth():
+                return
+            if self.headers.get("Origin") != "https://billo.tech":
+                return self._send(403, {"error": "origin rejected"})
+            try:
+                payload = self._body()
+                passkeys, credentials = _passkey_services()
+                if path.endswith("/options"):
+                    user_id = hashlib.sha256(("arc-user:" + CHAT_USERNAME).encode()).digest()
+                    identifier, options = passkeys.registration_options(CHAT_USERNAME, user_id, credentials.ids())
+                    return self._send(200, {"id": identifier, "options": options})
+                result = passkeys.verify_registration(payload["id"], payload["credential"])
+                credentials.add(result.credential_id, result.credential_public_key, result.sign_count)
+                return self._send(201, {"status": "registered"})
+            except Exception:
+                return self._send(400, {"error": "registration failed"})
         if path == "/arko/chat/api/telemetry":
             if not TELEMETRY_TOKEN or not hmac.compare_digest(
                     self.headers.get("Authorization", ""), f"Bearer {TELEMETRY_TOKEN}"):
