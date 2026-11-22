@@ -138,8 +138,12 @@ incorporated or contract signed.
   22 November (396,516,931 bytes; SHA-256
   `06b449f5f131f0aee1418fca5767b1f5d164a22ff51d7c5dd53a45828f123df6`)
   contains both backup archives and was verified after upload. A restoration
-  into a separate environment has not been tested, so recoverability is not
-  yet proven. Bangladesh-qualified counsel must still
+  into a separate environment has now been partially tested: on 22 November,
+  the SQL dump imported into a disposable, network-isolated MariaDB 11.8.9
+  container on the VPS, yielding 27 tables, 3 post rows and 178 option rows.
+  The container and its temporary database were removed after the check. A
+  complete WordPress application restore has not been tested, so full site
+  recoverability is not yet proven. Bangladesh-qualified counsel must still
   review the intended page and product category before publication because the
   current law's application to the proposed business page is unresolved.
 
