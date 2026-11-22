@@ -312,14 +312,15 @@ class Handler(BaseHTTPRequestHandler):
                 and _scrypt_matches(password))
 
     def _require_auth(self) -> bool:
-        if self._authorized():
-            return True
         address = self.client_address[0]
         now = time.monotonic()
         with _auth_lock:
             count, until = _auth_failures.get(address, (0, now + 3600))
             if now > until:
                 count, until = 0, now + 3600
+        if count <= 12 and self._authorized():
+            return True
+        with _auth_lock:
             count += 1
             _auth_failures[address] = (count, until)
         self.send_response(429 if count > 12 else 401)
@@ -391,6 +392,8 @@ class Handler(BaseHTTPRequestHandler):
                 payload = self._body()
                 _passkey_services()
                 if path.endswith("/create"):
+                    if not self._require_auth():
+                        return
                     basic = _basic_user(self.headers.get("Authorization", ""))
                     if not basic or not hmac.compare_digest(basic[0].encode(), CHAT_USERNAME.encode()) or not _scrypt_matches(basic[1]):
                         return self._send(403, {"error": "password confirmation required"})

@@ -137,6 +137,15 @@ class PasskeyHTTPTests(unittest.TestCase):
         self.assertEqual(r.status, 403)
         r.read(); c.close()
 
+    def test_password_lockout_blocks_correct_password_until_expiry(self):
+        import time
+        server._auth_failures['127.0.0.1'] = (13, time.monotonic() + 60)
+        try:
+            status, _ = self.post('/arko/chat/api/passkeys/register/options', 'https://billo.tech', b'arko:correct')
+            self.assertEqual(status, 429)
+        finally:
+            server._auth_failures.pop('127.0.0.1', None)
+
     def test_disabled_feature_returns_not_found(self):
         os.environ['ARC_CHAT_PASSKEYS_ENABLED'] = '0'
         try:
