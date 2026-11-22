@@ -1,4 +1,5 @@
 """One-use WebAuthn challenges; callers must still verify the ceremony."""
+import os
 import secrets
 import sqlite3
 import time
@@ -7,6 +8,11 @@ import time
 class ChallengeStore:
     def __init__(self, path):
         self.path = path
+        fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+        try:
+            os.fchmod(fd, 0o600)
+        finally:
+            os.close(fd)
         with sqlite3.connect(self.path) as db:
             db.execute("CREATE TABLE IF NOT EXISTS challenges (id TEXT PRIMARY KEY, purpose TEXT NOT NULL, challenge BLOB NOT NULL, expires REAL NOT NULL)")
 

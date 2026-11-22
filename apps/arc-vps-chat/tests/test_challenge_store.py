@@ -1,4 +1,5 @@
 import importlib.util
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,18 @@ spec.loader.exec_module(module)
 
 
 class ChallengeTests(unittest.TestCase):
+    def test_database_permissions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'auth.db'
+            path.touch(mode=0o666)
+            path.chmod(0o666)
+            module.ChallengeStore(path)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            link = Path(directory) / 'link.db'
+            link.symlink_to(path)
+            with self.assertRaises(OSError):
+                module.ChallengeStore(link)
+
     def test_one_use_and_purpose_binding(self):
         with tempfile.TemporaryDirectory() as directory:
             store = module.ChallengeStore(Path(directory) / 'auth.db')
