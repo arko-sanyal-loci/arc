@@ -1,5 +1,7 @@
 [Unit]
 Description=Arc VPS continuity chat and dispatch journal
+StartLimitIntervalSec=60
+StartLimitBurst=3
 After=network-online.target ollama.service
 Wants=network-online.target ollama.service
 
@@ -11,7 +13,7 @@ WorkingDirectory=/opt/arc-vps-chat
 EnvironmentFile=/etc/arc-chat/server.env
 ExecStart=/opt/arc-vps-chat/.venv/bin/python /opt/arc-vps-chat/server.py
 Restart=on-failure
-RestartSec=3
+RestartSec=10
 UMask=0077
 StateDirectory=arc-remote-chat
 StateDirectoryMode=0700

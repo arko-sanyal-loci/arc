@@ -9,6 +9,7 @@ import hmac
 import io
 import json
 import os
+import re
 import secrets
 from pathlib import Path
 import shutil
@@ -41,6 +42,7 @@ CHAT_USERNAME = os.environ.get("ARC_CHAT_USERNAME", "arko")
 CHAT_PASSWORD_HASH = os.environ.get("ARC_CHAT_PASSWORD_HASH", "")
 TELEMETRY_TOKEN = os.environ.get("ARC_CHAT_TELEMETRY_TOKEN", "")
 AGE_RECIPIENT = os.environ.get("ARC_CHAT_AGE_RECIPIENT", "")
+AGE_IDENTITY = os.environ.get("ARC_CHAT_AGE_IDENTITY", "")
 MAX_BODY = 4 * 1024 * 1024
 _auth_failures: dict[str, tuple[int, float]] = {}
 _auth_lock = threading.Lock()
@@ -51,6 +53,7 @@ _credentials = None
 _recovery = None
 _sessions: dict[str, float] = {}
 _passkey_attempts: list[float] = []
+_SAFE_SESSION_ID = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 def _passkey_services():
@@ -221,6 +224,60 @@ def _dispatch_events(limit: int = 25) -> list[dict]:
                       "event_type": event_type, "actor": actor, "payload": public_payload,
                       "record_hash": record_hash})
     return items
+
+
+def _normalize_session_id(value: object) -> str:
+    raw = str(value or "vps-default").strip()
+    normalized = _SAFE_SESSION_ID.sub("-", raw)[:96].strip("-")
+    return normalized or "vps-default"
+
+
+def _decrypt_chat_event(payload: bytes) -> dict | None:
+    """Decrypt one chat event only when an owner-configured identity exists."""
+    if not AGE_IDENTITY or not Path(AGE_IDENTITY).is_file() or not shutil.which("age"):
+        return None
+    try:
+        result = subprocess.run(
+            ["age", "--decrypt", "--identity", AGE_IDENTITY],
+            input=payload,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            check=True,
+            timeout=20,
+        )
+        value = json.loads(result.stdout.decode("utf-8"))
+        return value if isinstance(value, dict) else None
+    except (OSError, ValueError, UnicodeDecodeError, subprocess.SubprocessError):
+        return None
+
+
+def _recent_session_memory(session_id: str, limit: int = 4) -> list[dict]:
+    """Recover recent encrypted turns without mutating the append-only journal."""
+    if not AGE_IDENTITY:
+        return []
+    with _db() as conn:
+        rows = conn.execute(
+            "SELECT payload FROM journal WHERE event_type='chat.turn' AND encrypted=1 "
+            "ORDER BY sequence DESC LIMIT ?",
+            (max(1, min(limit * 3, 24)),),
+        ).fetchall()
+    recovered: list[dict] = []
+    for (payload,) in rows:
+        event = _decrypt_chat_event(payload)
+        if not event or _normalize_session_id(event.get("session_id")) != session_id:
+            continue
+        messages = event.get("messages", [])
+        if isinstance(messages, list):
+            recovered.extend(
+                item for item in messages[-2:]
+                if isinstance(item, dict) and item.get("role") in {"user", "assistant"}
+            )
+        answer = event.get("answer")
+        if isinstance(answer, str) and answer.strip():
+            recovered.append({"role": "assistant", "content": answer})
+        if len(recovered) >= limit * 2:
+            break
+    return list(reversed(recovered[-limit * 2:]))
 
 
 def _ollama_json(path: str, payload: dict | None = None, timeout: int = 5) -> dict:
@@ -580,15 +637,20 @@ class Handler(BaseHTTPRequestHandler):
                 clean_messages.append({"role": item["role"], "content": content})
             if total_chars > 32_000 or clean_messages[-1]["role"] != "user":
                 return self._send(422, {"error": "conversation is too large or does not end with a user message"})
+            session_id = _normalize_session_id(payload.get("session_id"))
             status = _workstation_status()
             events = _dispatch_events(8)
+            session_memory = _recent_session_memory(session_id)
             context = {"latest_workstation": status,
                        "recent_dispatch_events": events,
+                       "session_id": session_id,
+                       "persistent_recall_available": bool(session_memory),
                        "guidance": "Use these as time-stamped evidence. Distinguish current online telemetry from stale last-known state. Never claim access to workstation files or devices unless the telemetry says they are online. If a device is offline, help the user troubleshoot from the records available here."}
             messages_for_model = [{"role": "system", "content":
                 "You are Arc's VPS continuity assistant. Your only local context is the status and dispatch journal below. "
                 "Be candid about uncertainty and distinguish observations from inference. Do not claim to control local devices. "
                 "Keep private details in this protected session. Context: " + json.dumps(context, ensure_ascii=False)}]
+            messages_for_model.extend(session_memory)
             messages_for_model.extend(clean_messages)
             try:
                 response = _ollama_json("/api/chat", {
@@ -602,12 +664,23 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, ValueError, HTTPError, URLError, TimeoutError) as exc:
                 return self._send(503, {"error": "VPS local model is unavailable", "detail": type(exc).__name__})
             try:
-                _append_event("chat.turn", "arko", {"messages": clean_messages, "answer": answer}, encrypt=True)
+                _append_event(
+                    "chat.turn",
+                    "arko",
+                    {
+                        "session_id": session_id,
+                        "messages": clean_messages,
+                        "answer": answer,
+                    },
+                    encrypt=True,
+                )
                 journal_saved = True
             except Exception:
                 journal_saved = False
             return self._send(200, {"answer": answer, "model": CHAT_MODEL,
-                                    "journal_saved_encrypted": journal_saved})
+                                    "session_id": session_id,
+                                    "journal_saved_encrypted": journal_saved,
+                                    "persistent_recall_available": bool(session_memory)})
 
         return self._send(404, {"error": "not found"})
 

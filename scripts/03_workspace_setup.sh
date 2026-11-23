@@ -62,16 +62,19 @@ PIP="${VENV_DIR}/bin/pip"
 # Upgrade pip + wheel
 sudo -u "$LOCI_USER" "$PIP" install --upgrade pip setuptools wheel -q
 
-# Core runtime deps
-sudo -u "$LOCI_USER" "$PIP" install \
-    fastapi uvicorn httpx aiohttp \
-    numpy pydantic \
-    transformers accelerate \
-    safetensors sentencepiece tokenizers \
-    huggingface_hub \
-    tqdm rich \
-    cryptography \
-    -q
+# Keep the deployed environment aligned with the tested workstation surface.
+# The broad requirements.txt includes optional native posix-ipc; this pinned
+# lock intentionally excludes it because Arc uses stdlib mmap/struct here.
+WORKSTATION_LOCK="${REPOS_DIR}/arc/requirements-workstation.lock.txt"
+if [[ -f "$WORKSTATION_LOCK" ]]; then
+    sudo -u "$LOCI_USER" "$PIP" install -r "$WORKSTATION_LOCK" -q
+else
+    warn "  Workstation lock not found at ${WORKSTATION_LOCK}; using fallback runtime set"
+    sudo -u "$LOCI_USER" "$PIP" install \
+        fastapi uvicorn httpx aiohttp \
+        numpy pydantic rich \
+        -q
+fi
 info "  Core Python deps installed  ✓"
 
 # Intel XPU/IPEX (best-effort — may not have a 26.04 wheel yet)
