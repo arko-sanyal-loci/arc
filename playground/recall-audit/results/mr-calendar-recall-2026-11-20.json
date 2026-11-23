@@ -1,0 +1,218 @@
+{
+  "created_at_utc": "2026-11-20T10:13:13+00:00",
+  "source": "WORKSPACE-MAP.md",
+  "source_sha256": "ab125c4bcbde5f8df038663a9fd8c1c3cdbb6aaecd52129e077341f2331eba58",
+  "source_section_count": 10,
+  "full_chat_transcript_available": false,
+  "scope_note": "This run checks the 10-section curated workspace map, not the entire ChatGPT transcript.",
+  "cases": [
+    {
+      "question": "What port does the Arc model server use?",
+      "category": "information_extraction",
+      "facets": [
+        "information_extraction"
+      ],
+      "recall_depth": 5,
+      "retrieved_count": 5,
+      "retrieved_sections": [
+        "Arc",
+        "Mr Calendar",
+        "GPU research and verification",
+        "TRS, source access and release safety",
+        "Storage and recovery"
+      ],
+      "source_sha256": "ab125c4bcbde5f8df038663a9fd8c1c3cdbb6aaecd52129e077341f2331eba58",
+      "section_sha256": [
+        "37c0f230f7a414149dea1a1cd5ad123beaf324b10584a87f9bc48c5ff6f363b0",
+        "99eba91308c4f65a66ed8daaaba8887e4b752ac3e540cc960da2e1f515cb3274",
+        "cf89fc1c628ca412a3756032b5a9a4ef6f12097f32bad30ca436265356f470e7",
+        "e57d91c8b628dd514eb351829e3ee92fda5b84f5ea5c2d4ca19624055da14040",
+        "6d44e5a27edc55ceadc09c6d4b5736abd5ce6d02526a4ade04fe6fe9d7b37d8b"
+      ],
+      "estimated_tokens_before": 764,
+      "estimated_tokens_after": 330,
+      "nonempty_context": true
+    },
+    {
+      "question": "What is the current local runtime status?",
+      "category": "knowledge_update",
+      "facets": [
+        "knowledge_update"
+      ],
+      "recall_depth": 3,
+      "retrieved_count": 3,
+      "retrieved_sections": [
+        "TRS, source access and release safety",
+        "Handoff, verification and generation chronology",
+        "LOCI"
+      ],
+      "source_sha256": "ab125c4bcbde5f8df038663a9fd8c1c3cdbb6aaecd52129e077341f2331eba58",
+      "section_sha256": [
+        "e57d91c8b628dd514eb351829e3ee92fda5b84f5ea5c2d4ca19624055da14040",
+        "c4e7e24fe11e380e759bb7a889419c0b145ea457e481423d1193b6f7d6da77c4",
+        "db903dae8823080de77e12ae579dcf486bcb904fcbd908a237b5b228e94aeaf5"
+      ],
+      "estimated_tokens_before": 468,
+      "estimated_tokens_after": 329,
+      "nonempty_context": true
+    },
+    {
+      "question": "When was the workspace voice runtime checked?",
+      "category": "temporal_reasoning",
+      "facets": [
+        "temporal_reasoning"
+      ],
+      "recall_depth": 7,
+      "retrieved_count": 7,
+      "retrieved_sections": [
+        "Storage and recovery",
+        "TRS, source access and release safety",
+        "Handoff, verification and generation chronology",
+        "Arc",
+        "Glassbox",
+        "Mr Calendar",
+        "LOCI"
+      ],
+      "source_sha256": "ab125c4bcbde5f8df038663a9fd8c1c3cdbb6aaecd52129e077341f2331eba58",
+      "section_sha256": [
+        "6d44e5a27edc55ceadc09c6d4b5736abd5ce6d02526a4ade04fe6fe9d7b37d8b",
+        "e57d91c8b628dd514eb351829e3ee92fda5b84f5ea5c2d4ca19624055da14040",
+        "c4e7e24fe11e380e759bb7a889419c0b145ea457e481423d1193b6f7d6da77c4",
+        "37c0f230f7a414149dea1a1cd5ad123beaf324b10584a87f9bc48c5ff6f363b0",
+        "0439b411da07c1beade752d985bfe55c280fb1aeeed6cc0dcb1a6ffe3c974e77",
+        "99eba91308c4f65a66ed8daaaba8887e4b752ac3e540cc960da2e1f515cb3274",
+        "db903dae8823080de77e12ae579dcf486bcb904fcbd908a237b5b228e94aeaf5"
+      ],
+      "estimated_tokens_before": 1018,
+      "estimated_tokens_after": 329,
+      "nonempty_context": true
+    },
+    {
+      "question": "Summarize every section across the entire workspace map",
+      "category": "multi_session_reasoning",
+      "facets": [
+        "multi_session_reasoning"
+      ],
+      "recall_depth": 10,
+      "retrieved_count": 10,
+      "retrieved_sections": [
+        "Storage and recovery",
+        "Arko and Roza",
+        "LOCI",
+        "TRS, source access and release safety",
+        "Handoff, verification and generation chronology",
+        "Arc",
+        "Media and vision prototypes",
+        "Mr Calendar",
+        "Glassbox",
+        "GPU research and verification"
+      ],
+      "source_sha256": "ab125c4bcbde5f8df038663a9fd8c1c3cdbb6aaecd52129e077341f2331eba58",
+      "section_sha256": [
+        "6d44e5a27edc55ceadc09c6d4b5736abd5ce6d02526a4ade04fe6fe9d7b37d8b",
+        "b84389a8319c5822e24b4ad2644a53545cae74b25d307d723b00af162f297304",
+        "db903dae8823080de77e12ae579dcf486bcb904fcbd908a237b5b228e94aeaf5",
+        "e57d91c8b628dd514eb351829e3ee92fda5b84f5ea5c2d4ca19624055da14040",
+        "c4e7e24fe11e380e759bb7a889419c0b145ea457e481423d1193b6f7d6da77c4",
+        "37c0f230f7a414149dea1a1cd5ad123beaf324b10584a87f9bc48c5ff6f363b0",
+        "f2d3022ea7379d9a848dd09a78184df13a31707f38e9e21fb970a91e6a0e6274",
+        "99eba91308c4f65a66ed8daaaba8887e4b752ac3e540cc960da2e1f515cb3274",
+        "0439b411da07c1beade752d985bfe55c280fb1aeeed6cc0dcb1a6ffe3c974e77",
+        "cf89fc1c628ca412a3756032b5a9a4ef6f12097f32bad30ca436265356f470e7"
+      ],
+      "estimated_tokens_before": 1367,
+      "estimated_tokens_after": 331,
+      "nonempty_context": true
+    }
+  ],
+  "runtime": {
+    "checked_at": "2026-11-20T16:13:13+06:00",
+    "router": {
+      "reachable": true,
+      "port": 11437,
+      "lanes_ready": {
+        "rtx": true,
+        "arc": true
+      },
+      "load": {
+        "rtx": {
+          "active": false,
+          "waiting": 0,
+          "accepted": 0,
+          "slot_limit": 1,
+          "seconds_active": 0
+        },
+        "arc": {
+          "active": false,
+          "waiting": 0,
+          "accepted": 0,
+          "slot_limit": 1,
+          "seconds_active": 0
+        }
+      },
+      "installed_models": {
+        "rtx": [
+          "gemma4:26b-a4b-it-q4_K_M",
+          "nomic-embed-text:latest",
+          "qwen3-vl:8b-instruct",
+          "qwen3.5:4b-q4_K_M",
+          "qwen3.6:27b-q4_K_M"
+        ],
+        "arc": [
+          "gemma4:26b-a4b-it-q4_K_M",
+          "nomic-embed-text:latest",
+          "qwen3-vl:8b-instruct",
+          "qwen3.5:4b-q4_K_M",
+          "qwen3.6:27b-q4_K_M"
+        ]
+      }
+    },
+    "ollama": {
+      "arc": {
+        "reachable": true,
+        "resident_models": [
+          {
+            "name": "nomic-embed-text:latest",
+            "vram_bytes": 335743549
+          }
+        ],
+        "installed_models": [
+          "gemma4:26b-a4b-it-q4_K_M",
+          "qwen3.6:27b-q4_K_M",
+          "qwen3.5:4b-q4_K_M",
+          "nomic-embed-text:latest",
+          "qwen3-vl:8b-instruct"
+        ]
+      },
+      "rtx": {
+        "reachable": true,
+        "resident_models": [],
+        "installed_models": [
+          "gemma4:26b-a4b-it-q4_K_M",
+          "qwen3.6:27b-q4_K_M",
+          "qwen3.5:4b-q4_K_M",
+          "nomic-embed-text:latest",
+          "qwen3-vl:8b-instruct"
+        ]
+      }
+    },
+    "embedding": {
+      "model": "nomic-embed-text:latest",
+      "available_lanes": {
+        "8000": true,
+        "11435": true
+      },
+      "ready": true,
+      "configured_ports": [
+        8000,
+        11435
+      ]
+    },
+    "scope": "Loopback probes. Repository, deployment, backup and recorder status require separate evidence."
+  },
+  "scene_retrieval": {
+    "input_count": 4,
+    "returned_count": 4,
+    "nonempty": true
+  }
+}

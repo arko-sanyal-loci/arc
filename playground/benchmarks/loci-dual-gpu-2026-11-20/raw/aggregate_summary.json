@@ -1,0 +1,394 @@
+{
+  "built_utc": "2026-11-20T05:10:22.122598+00:00",
+  "model_matrix": {
+    "trials": 96,
+    "http_successes": 96,
+    "blank_final_answers": 0,
+    "models": {
+      "4b": {
+        "arc_b70_vulkan": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.5302585895,
+          "p90_total_s": 2.0506633787000004,
+          "median_output_tokens_per_second": 98.18797717450983
+        },
+        "rtx_5060ti_cuda": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.3448860210000002,
+          "p90_total_s": 4.4830921217,
+          "median_output_tokens_per_second": 106.84134219964358
+        }
+      },
+      "8b": {
+        "arc_b70_vulkan": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.509386664,
+          "p90_total_s": 3.2939354375999996,
+          "median_output_tokens_per_second": 81.9799366671505
+        },
+        "rtx_5060ti_cuda": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.4147533829999999,
+          "p90_total_s": 3.005416509,
+          "median_output_tokens_per_second": 80.97475488274449
+        }
+      },
+      "26b_moe": {
+        "arc_b70_vulkan": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.5883317959999999,
+          "p90_total_s": 3.1875574174,
+          "median_output_tokens_per_second": 90.79368095169937
+        },
+        "rtx_5060ti_cuda": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 1.825146642,
+          "p90_total_s": 2.5150504007,
+          "median_output_tokens_per_second": 66.56044625609448
+        }
+      },
+      "27b": {
+        "arc_b70_vulkan": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 6.5449817735,
+          "p90_total_s": 11.8077084665,
+          "median_output_tokens_per_second": 26.83492967078218
+        },
+        "rtx_5060ti_cuda": {
+          "n": 12,
+          "successes": 12,
+          "blank_final": 0,
+          "rubric_passes": 12,
+          "rubric_n": 12,
+          "mean_required_term_coverage": 1.0,
+          "median_total_s": 11.5999955965,
+          "p90_total_s": 13.4584135838,
+          "median_output_tokens_per_second": 12.53598579700579
+        }
+      }
+    }
+  },
+  "shader": {
+    "rtx": {
+      "renderer": "NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2",
+      "gl_version": "3.3.0 NVIDIA 595.99.02",
+      "runs": 45,
+      "1080p": {
+        "full": {
+          "median_p95_ms": 8.392943148282939,
+          "frames_over_10ms_total": 82,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 1492992000,
+          "median_packet_json_bytes": 51913
+        },
+        "coarse": {
+          "median_p95_ms": 0.35660850298881996,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 41472000,
+          "median_packet_json_bytes": 50798
+        },
+        "hybrid": {
+          "median_p95_ms": 0.3949274458136642,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 45544320,
+          "median_packet_json_bytes": 50798
+        },
+        "adaptive": {
+          "median_p95_ms": 0.38840084453113377,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 26567520,
+          "median_packet_json_bytes": 29964
+        },
+        "observed": {
+          "median_p95_ms": 0.5504170014319242,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 43847520,
+          "median_packet_json_bytes": 29964
+        }
+      }
+    },
+    "arc": {
+      "renderer": "Mesa Intel(R) Graphics (BMG G31)",
+      "gl_version": "4.6 (Core Profile) Mesa 26.2.6 - kisak-mesa PPA",
+      "runs": 45,
+      "1080p": {
+        "full": {
+          "median_p95_ms": 10.114527395489858,
+          "frames_over_10ms_total": 238,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 1492992000,
+          "median_packet_json_bytes": 51918
+        },
+        "coarse": {
+          "median_p95_ms": 0.5730061504436889,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 41472000,
+          "median_packet_json_bytes": 50781
+        },
+        "hybrid": {
+          "median_p95_ms": 0.6698321507428773,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 45544320,
+          "median_packet_json_bytes": 50781
+        },
+        "adaptive": {
+          "median_p95_ms": 0.6148747488623484,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 26567520,
+          "median_packet_json_bytes": 29961
+        },
+        "observed": {
+          "median_p95_ms": 0.8505910023814067,
+          "frames_over_10ms_total": 0,
+          "measured_frames_total": 720,
+          "median_gpu_readback_bytes": 43847520,
+          "median_packet_json_bytes": 29961
+        }
+      }
+    }
+  },
+  "context_compaction_and_retrieval": {
+    "manifest": "context-20261120T044809Z-e2eda387_manifest.json",
+    "trial_count": 12,
+    "all_calls_ok": true,
+    "all_trials_retain_exact_terms": true,
+    "original_chars": 22231,
+    "compacted_chars": 6396,
+    "original_messages": 22,
+    "compacted_messages": 7,
+    "prompt_eval_tokens_full": 3744,
+    "prompt_eval_tokens_compacted": 1186,
+    "nomic_top1_id": "AT-10",
+    "nomic_expected_top1": "AT-7",
+    "nomic_rankings": [
+      {
+        "id": "AT-10",
+        "cosine": 0.8692865231383912
+      },
+      {
+        "id": "AT-9",
+        "cosine": 0.8533847099670796
+      },
+      {
+        "id": "AT-8",
+        "cosine": 0.8532049146728846
+      },
+      {
+        "id": "AT-7",
+        "cosine": 0.8440364946066816
+      },
+      {
+        "id": "AT-11",
+        "cosine": 0.5899215413835563
+      }
+    ]
+  },
+  "retrieval_ablation": {
+    "rubric": "top-1 must abstain if target ID absent; top-4 must return all three exact target facts and not substitute distractor F-8. Source ID need not be repeated in answer.",
+    "groups": [
+      {
+        "model_key": "26b_moe",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "26b_moe",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "26b_moe",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "26b_moe",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "27b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "27b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "27b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "27b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "4b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "4b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "4b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "4b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "8b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "8b",
+        "device": "arc_b70_vulkan",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "8b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 1,
+        "criterion": "safe_abstention_top1",
+        "successes": 1,
+        "n": 1
+      },
+      {
+        "model_key": "8b",
+        "device": "rtx_5060ti_cuda",
+        "retrieved_k": 4,
+        "criterion": "exact_facts_top4",
+        "successes": 1,
+        "n": 1
+      }
+    ]
+  },
+  "reasoning_mode": {
+    "trials": 6,
+    "final_nonempty": 0,
+    "ended_at_length": 6,
+    "eval_tokens": [
+      1024
+    ],
+    "thinking_char_count_only_min": 3189,
+    "thinking_char_count_only_max": 3768
+  },
+  "resource_sampling": {
+    "samples": 180,
+    "duration_seconds": 895.03409,
+    "start_utc": "2026-11-20T04:45:20.407553+00:00",
+    "end_utc": "2026-11-20T05:00:15.441643+00:00",
+    "nvidia_memory_mib_min_max": [
+      24.0,
+      15212.0
+    ],
+    "nvidia_util_percent_min_max": [
+      0.0,
+      100.0
+    ],
+    "nvidia_power_w_max": 130.54,
+    "nvidia_temperature_c_min_max": [
+      40.0,
+      66.0
+    ],
+    "host_available_ram_gib_min": 17.161380767822266,
+    "arc_energy_counter_delta_uj": 67867575806,
+    "arc_utilization": null,
+    "arc_utilization_note": "unavailable: intel_gpu_top denied PMU access without CAP_PERFMON"
+  }
+}

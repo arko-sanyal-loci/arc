@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Billo Tech public website and service status.">
+  <meta name="theme-color" content="#101b25">
+  <title>Service status — Billo Tech</title>
+  <style>
+    :root { color-scheme: dark; --ink:#edf5f2; --muted:#a7b9b4; --surface:#17252e; --line:#31444b; --accent:#82e0ba; --warn:#ffd27d; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#101b25; color:var(--ink); font:16px/1.6 system-ui,sans-serif; }
+    a { color:var(--accent); }
+    a:focus-visible { outline:3px solid #b6d6ff; outline-offset:3px; }
+    .wrap { width:min(820px,calc(100% - 40px)); margin:0 auto; }
+    header { border-bottom:1px solid var(--line); }
+    nav { min-height:72px; display:flex; align-items:center; justify-content:space-between; }
+    nav a:first-child { color:var(--ink); font-weight:750; letter-spacing:.04em; text-decoration:none; }
+    main { padding:76px 0; }
+    h1 { margin:8px 0 10px; font-size:clamp(2.3rem,7vw,4rem); line-height:1.08; }
+    h2 { margin:0; font-size:1.05rem; }
+    p { color:var(--muted); }
+    .card { margin-top:14px; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--surface); }
+    .row { display:flex; justify-content:space-between; gap:18px; align-items:center; }
+    .state { color:var(--warn); font-weight:700; white-space:nowrap; }
+    .state-good { color:var(--accent); }
+    footer { border-top:1px solid var(--line); padding:25px 0; color:var(--muted); font-size:.9rem; }
+    @media(max-width:520px) { .row { align-items:flex-start; flex-direction:column; gap:3px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap" aria-label="Main navigation">
+      <a href="/">BILLO TECH</a>
+      <a href="/">Home</a>
+    </nav>
+  </header>
+  <main class="wrap">
+    <p>PUBLIC SERVICE STATUS</p>
+    <h1>System status</h1>
+    <p>This page reports the public website and the current deployment boundary. It does not expose internal memory, customer data, or unauthenticated API operations.</p>
+    <section class="card">
+      <div class="row"><h2>Public website</h2><span class="state state-good">Available</span></div>
+      <p>The static Billo Tech landing page and this status page are served through the public web stack.</p>
+    </section>
+    <section class="card">
+      <div class="row"><h2>Landing pages</h2><span class="state state-good">Available</span></div>
+      <p>The public landing pages are served separately from the protected Arc continuity service.</p>
+    </section>
+    <section class="card">
+      <div class="row"><h2>Arc continuity chat</h2><span class="state state-good">Available · sign-in required</span></div>
+      <p>The chat runs on the VPS with its local Ollama model and an encrypted, append-only conversation journal. It remains available when the workstation is offline.</p>
+      <p>For the latest workstation heartbeat, Ollama status and journal verification, sign in to the <a href="/arko/chat">protected Arc chat</a>.</p>
+    </section>
+    <section class="card">
+      <div class="row"><h2>LOCI ↔ Billo memory replication</h2><span class="state">Not enabled</span></div>
+      <p>The two codebases use separate runtimes and storage schemas. No authenticated cross-runtime replication or live VPS memory sync is claimed.</p>
+    </section>
+    <p><a href="/">← Back to Billo Tech</a> · <a href="/arko/chat">Open protected Arc chat</a></p>
+  </main>
+  <footer><div class="wrap">Status reflects the currently configured deployment; it is not a continuous external monitoring guarantee.</div></footer>
+</body>
+</html>

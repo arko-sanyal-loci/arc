@@ -1,0 +1,211 @@
+# Arc Runtime Configuration
+# Generated: 2026-11-18
+# Benchmark ref: data/bench_bus_fidelity.json — ring 4 MiB, tick 333.2 KB/140ms
+
+# ── Server ─────────────────────────────────────────────────────────────────
+server:
+  host: "0.0.0.0"
+  port: 7860
+  debug: false
+  reload: false
+  workers: 1
+
+# Native client contract. Keep Claude-compatible MCP/tool semantics as the
+# primary integration path; runtime_label is descriptive metadata only.
+compatibility:
+  client: "claude"
+  runtime_label: "plaude bonnet"
+
+# Arc is the main runtime. These are first-class capability boundaries even
+# when a specialized local process provides the implementation.
+capabilities:
+  memory:
+    backend: "loci"
+    glassbox: true
+    session_continuity: true
+  modalities:
+    text: "native"
+    audio: "local-consent-gated"
+    video: "local-consent-gated"
+    music: "not-yet-wired"
+  tools:
+    workspace: "bounded"
+    scratchpad: "local"
+    mcp: "enabled"
+
+# ── API Keys ───────────────────────────────────────────────────────────────
+# Prefer environment variables: ARC_XAI_KEY, ARC_NEXOS_KEY, ARC_LOCAL_KEY
+# Values here are overridden by env vars if set.
+api_keys:
+  xai: ""
+  nexos: ""
+  local: ""                    # optional bearer token for local endpoint
+
+# ── Provider routing ───────────────────────────────────────────────────────
+providers:
+  # Priority: local → nexos → xai
+  local:
+    endpoint: "http://localhost:11434/v1"   # or Ollama / llama.cpp
+    model:    "arc-local"
+    enabled:  true
+    health_timeout_s: 3
+  nexos:
+    endpoint: "https://api.nexos.ai/v1"
+    model:    "meta-llama/llama-3.3-70b-instruct"
+    enabled:  true
+    health_timeout_s: 5
+  xai:
+    endpoint: "https://api.x.ai/v1"
+    model:    "grok-2"
+    enabled:  true
+    health_timeout_s: 5
+
+  # Health poll interval
+  health_poll_interval_s: 30
+
+# Explicit coordination policy for the two local inference lanes.
+coordination:
+  mode: "local-first"
+  dual_gpu_mode: "explicit"
+  authoritative_lane: "arc"
+  parallel_timeout_s: 120
+
+# Standby context for active token generation. This is a residency plan;
+# backend-specific KV movement must consume it before data is transferred.
+neighborhood_staging:
+  enabled: true
+  max_hops: 1
+  heat_gradient: 0.85
+  standby_token_budget: null
+  min_effective_heat: 0.05
+  diminishing_return_floor: 0.0005
+  active_generation:
+    plateau_window: 3
+    min_improvement: 0.01
+    min_score_to_stop: 0.20
+  staged_orchestration:
+    enabled: true
+    fast_model: "qwen3.5:4b-q4_K_M"
+    medium_model: "gemma4:26b-a4b-it-q4_K_M"
+    heavy_model: "qwen3.6:27b-q4_K_M"
+    research_parallel: true
+    heavy_handoff_hop: 1
+
+# ── GPU offload ────────────────────────────────────────────────────────────
+gpu:
+  # Arc B70 (Y=1 deep lane)
+  arc_b70:
+    lane:            1
+    total_vram_mb:   32768       # 32 GB GDDR6
+    internal_bw_gbs: 608.0      # internal VRAM BW (not cross-GPU)
+    low_water_mb:    4096        # do not spill to Arc if free < 4 GB
+
+  # RTX 5060 Ti (Y=0 fast lane)
+  rtx_5060ti:
+    lane:            0
+    total_vram_mb:   16384       # 16 GB GDDR7
+    internal_bw_gbs: 448.0      # internal VRAM BW (not cross-GPU)
+    low_water_mb:    2048        # pull from Arc when RTX free < 2 GB
+    high_water_mb:   4096        # spill to Arc when RTX free > 4 GB
+
+  # Inter-bus channel: /dev/shm at 7.9 GB/s sustained
+  inter_bus:
+    path:        "/dev/shm"
+    speed_gbs:   7.9
+    # Ring buffer — from bench_bus_fidelity benchmark (4 MiB = 12.3× tick buffer)
+    # Drain time: 0.494ms at 7.9 GB/s; tick traffic: 333.2 KB/140ms
+    ring_size_bytes: 4194304    # 4 MiB
+
+  sovereignty_lock: false       # pin Local 70B weights to Arc B70
+
+# ── Heartbeat ──────────────────────────────────────────────────────────────
+heartbeat:
+  tick_ms:            140
+  missed_ticks_warn:  3
+  missed_ticks_fail:  10
+  shm_path:           "/dev/shm/arc_heartbeat"
+  status_path:        "/dev/shm/arc_status.json"
+
+# ── Engine sync ────────────────────────────────────────────────────────────
+engine_sync:
+  db_path:            "data/arc.db"
+  state_path:         "/dev/shm/arc_engine_state.json"
+  sync_interval_ticks: 50       # sync every 50 heartbeat ticks
+
+# ── Loci memory engine ─────────────────────────────────────────────────────
+loci:
+  db_path:            "data/arc.db"
+  # SLP fidelity thresholds (from slp_encoding.py)
+  alpha:              0.0500    # cold floor heat
+  h_max:              0.9999    # hot ceiling
+  # CAS learning rate
+  eta_default:        0.1
+  eta_boost:          0.3       # when affinity < 0.2
+  # CARD streaming budgets
+  card:
+    haiku_max_tokens:  560
+    model_7b_tokens:   1000
+    opus_max_tokens:   5000
+  # CAR triage classes: DROP SCAR GOAL PLAYGROUND STANDARD
+  car:
+    theta_rerun:  0.65
+    theta_hold:   0.35
+    decay_gamma:  0.98
+
+# ── Tiered memory hierarchy ───────────────────────────────────────────────
+# HOT  (H ≥ 0.70) → VRAM  (48 GB aggregate)
+# WARM (H ≥ 0.35) → DDR5  (32 GB DDR5-5200, XMP1)
+# COLD (H < 0.35) → NVMe  (SSD)
+tiered_memory:
+  thresholds:
+    vram_min_heat: 0.70   # hot / burning / sovereign → VRAM
+    ddr5_min_heat: 0.35   # warm / active             → DDR5
+    # below 0.35          → NVMe (cold / low / alpha)
+
+  ddr5:
+    total_mb:      32768  # 32 GB DDR5
+    # XMP1 MUST be enabled in BIOS for full DDR5-5200 speed.
+    # Without XMP1 the kit defaults to DDR5-4800 (JEDEC), losing ~10% BW.
+    # Enable: BIOS → AI Tweaker → Ai Overclock Tuner → XMP I
+    # Verify: sudo dmidecode -t memory | grep Speed
+    speed_mts:     5200   # target speed with XMP1
+    bw_real_gbs:   41.6   # realistic single-channel BW at 5200 MT/s
+
+  vram:
+    arc_b70_mb:    32768  # Arc B70 GDDR6
+    rtx_5060ti_mb: 16384  # RTX 5060 Ti GDDR7
+    total_mb:      49152  # aggregate (minus small OS headroom)
+
+  nvme:
+    path: "data/"         # NVMe mount for cold node persistence
+
+  # Migration policy
+  migration:
+    max_batch_mb:         512   # max transferred per heartbeat tick
+    headroom_pct:         5     # always keep 5% free in each tier
+    shm_state_path:       "/dev/shm/arc_tier_state.json"
+
+# ── MCP ────────────────────────────────────────────────────────────────────
+mcp:
+  enabled: true
+  endpoint: "/mcp"
+  tools:
+    - arc_chat
+    - arc_memory_search
+    - arc_status
+    - arc_workspace_list
+    - arc_workspace_read
+    - arc_workspace_write
+    - arc_workspace_check
+    - arc_scratch_write
+    - arc_scratch_read
+    - arc_scratch_clear
+    - arc_browser_navigate
+    - arc_browser_mouse
+    - arc_browser_sensitive_action
+
+# ── Logging ────────────────────────────────────────────────────────────────
+logging:
+  level:  "INFO"
+  format: "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+  file:   "logs/arc.log"
