@@ -17,6 +17,14 @@ The shell:
 - keeps browser storage in Electron's persistent `arc-browser` partition;
 - allows only HTTP(S) navigation and denies browser permission requests by
   default.
+- exposes visible browser-only input primitives (mouse move, click, type, and
+  scroll) through the isolated preload bridge;
+- blocks configured adult domains and requires a one-shot confirmation for
+  sensitive browser actions.
+
+The control surface is intentionally limited to the Arc Chromium window. It
+does not move the operating-system cursor or control unrelated desktop
+applications.
 
 ## Development
 

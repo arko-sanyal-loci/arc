@@ -2,6 +2,7 @@ const {
   app,
   BrowserView,
   BrowserWindow,
+  dialog,
   ipcMain,
   Menu,
   session,
@@ -17,11 +18,36 @@ const repoRoot = path.resolve(__dirname, "../..");
 let runtimeProcess = null;
 let browserWindow = null;
 let browserView = null;
+const blockedBrowserHosts = new Set([
+  "porn.com",
+  "pornhub.com",
+  "xhamster.com",
+  "xvideos.com",
+  "xnxx.com",
+  "redtube.com",
+  "spankbang.com",
+  "chaturbate.com",
+  "stripchat.com",
+  "onlyfans.com",
+  "rule34.xxx",
+  "nhentai.net",
+]);
 
 function isBrowserUrl(value) {
   try {
     const url = new URL(value);
     return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isBlockedBrowserUrl(value) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase().replace(/^www\./, "");
+    return [...blockedBrowserHosts].some(
+      (blocked) => hostname === blocked || hostname.endsWith(`.${blocked}`),
+    );
   } catch {
     return false;
   }
@@ -38,7 +64,17 @@ function normalizeBrowserUrl(value) {
   return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
 }
 
-function updateBrowserToolbar() {
+function loadBrowserUrl(value) {
+  const url = normalizeBrowserUrl(value);
+  if (!browserView || isBlockedBrowserUrl(url)) {
+    updateBrowserToolbar({ blocked: true, url });
+    return false;
+  }
+  browserView.webContents.loadURL(url);
+  return true;
+}
+
+function updateBrowserToolbar(extra = {}) {
   if (!browserWindow || browserWindow.isDestroyed() || !browserView) {
     return;
   }
@@ -47,6 +83,8 @@ function updateBrowserToolbar() {
     title: browserView.webContents.getTitle(),
     canGoBack: browserView.webContents.canGoBack(),
     canGoForward: browserView.webContents.canGoForward(),
+    blocked: Boolean(extra.blocked),
+    blockedUrl: extra.url || "",
   });
 }
 
@@ -99,14 +137,15 @@ function createBrowserWindow() {
   browserView.webContents.on("did-navigate-in-page", updateBrowserToolbar);
   browserView.webContents.on("page-title-updated", updateBrowserToolbar);
   browserView.webContents.setWindowOpenHandler(({ url }) => {
-    if (isBrowserUrl(url)) {
-      browserView.webContents.loadURL(url);
+    if (isBrowserUrl(url) && !isBlockedBrowserUrl(url)) {
+      loadBrowserUrl(url);
     }
     return { action: "deny" };
   });
   browserView.webContents.on("will-navigate", (event, url) => {
-    if (!isBrowserUrl(url)) {
+    if (!isBrowserUrl(url) || isBlockedBrowserUrl(url)) {
       event.preventDefault();
+      updateBrowserToolbar({ blocked: true, url });
     }
   });
   browserSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
@@ -114,7 +153,7 @@ function createBrowserWindow() {
   });
 
   browserWindow.loadFile(path.join(__dirname, "browser.html"));
-  browserView.webContents.loadURL("https://www.google.com");
+  loadBrowserUrl("https://www.google.com");
   resizeBrowserView();
 }
 
@@ -228,18 +267,51 @@ app.whenReady().then(async () => {
 
 ipcMain.handle("browser-open", (_event, value) => {
   createBrowserWindow();
-  if (browserView) {
-    browserView.webContents.loadURL(normalizeBrowserUrl(value));
-  }
+  return loadBrowserUrl(value);
 });
 ipcMain.handle("browser-navigate", (_event, value) => {
-  if (browserView) {
-    browserView.webContents.loadURL(normalizeBrowserUrl(value));
-  }
+  return loadBrowserUrl(value);
 });
 ipcMain.handle("browser-back", () => browserView?.webContents.goBack());
 ipcMain.handle("browser-forward", () => browserView?.webContents.goForward());
 ipcMain.handle("browser-reload", () => browserView?.webContents.reload());
+ipcMain.handle("browser-mouse-move", (_event, x, y) => {
+  if (!browserView || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+  return true;
+});
+ipcMain.handle("browser-click", (_event, x, y, button = "left") => {
+  if (!browserView || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  if (!["left", "middle", "right"].includes(button)) return false;
+  browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+  browserView.webContents.sendInputEvent({ type: "mouseDown", button });
+  browserView.webContents.sendInputEvent({ type: "mouseUp", button });
+  return true;
+});
+ipcMain.handle("browser-type", (_event, text) => {
+  if (!browserView || typeof text !== "string" || text.length > 20000) return false;
+  browserView.webContents.insertText(text);
+  return true;
+});
+ipcMain.handle("browser-scroll", (_event, x, y, deltaY) => {
+  if (!browserView || ![x, y, deltaY].every(Number.isFinite)) return false;
+  browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+  browserView.webContents.sendInputEvent({ type: "mouseWheel", x, y, deltaY });
+  return true;
+});
+ipcMain.handle("browser-sensitive-action", async (_event, action) => {
+  if (!browserWindow || typeof action !== "string" || action.length > 200) return false;
+  const { response } = await dialog.showMessageBox(browserWindow, {
+    type: "warning",
+    buttons: ["Cancel", "Allow once"],
+    defaultId: 0,
+    cancelId: 0,
+    title: "Arc browser confirmation",
+    message: "Allow this sensitive browser action?",
+    detail: action,
+  });
+  return response === 1;
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

@@ -8,8 +8,11 @@ extension points, and a single packaged launcher.
 This is a behavior-level design reference, not a reconstruction of Claude
 Desktop. Arc uses its own UI, runtime, prompts, storage, and orchestration.
 The browser is an Electron/Chromium surface with explicit navigation and
-permission boundaries. The Arc runtime remains loopback-first and keeps
-provider credentials outside the package.
+permission boundaries. It supports visible browser-local mouse, click, typing,
+scroll, and navigation actions, while adult domains and browser permissions
+are blocked by default. It does not silently control the operating-system
+desktop or unrelated applications. The Arc runtime remains loopback-first and
+keeps provider credentials outside the package.
 
 The main parity gaps are tracked honestly: native music tooling, true backend
 KV paging, native macOS/Windows builds, and authorized external quality

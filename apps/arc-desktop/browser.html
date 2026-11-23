@@ -39,6 +39,10 @@
         document.getElementById("title").textContent = state.title || "";
         document.getElementById("back").disabled = !state.canGoBack;
         document.getElementById("forward").disabled = !state.canGoForward;
+        if (state.blocked) {
+          document.getElementById("title").textContent = "Blocked by Arc safety policy";
+          address.value = state.blockedUrl || address.value;
+        }
       });
     </script>
   </body>
