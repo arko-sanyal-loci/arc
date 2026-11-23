@@ -1,0 +1,50 @@
+{
+  "name": "arc-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude-compatible desktop shell for the Arc runtime",
+  "main": "main.js",
+  "homepage": "https://billo.tech",
+  "author": {
+    "name": "Billo Tech",
+    "email": "opensource@billo.tech"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "tech.billo.arc",
+    "productName": "Arc",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "browser.html",
+      "browser-preload.js"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

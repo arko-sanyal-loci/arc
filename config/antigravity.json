@@ -15,13 +15,26 @@
     "description": "Loci-powered local AI with dynamic GPU offloading",
     "entrypoint": "app/server.py",
     "runtime": "python",
+    "client_compatibility": "claude",
+    "runtime_label": "plaude bonnet",
     "port": 7860
   },
 
   "mcp": {
     "enabled": true,
     "endpoint": "http://localhost:7860/mcp",
-    "tools": ["arc_chat", "arc_memory_search", "arc_status"],
+    "tools": [
+      "arc_chat",
+      "arc_memory_search",
+      "arc_status",
+      "arc_workspace_list",
+      "arc_workspace_read",
+      "arc_workspace_write",
+      "arc_workspace_check",
+      "arc_scratch_write",
+      "arc_scratch_read",
+      "arc_scratch_clear"
+    ],
     "auto_connect": true
   },
 

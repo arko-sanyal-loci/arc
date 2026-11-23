@@ -371,8 +371,8 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-const PROVIDERS = ['LOCAL', 'NEXOS', 'XAI'];
-const PROVIDER_LABELS = { LOCAL: 'Local', NEXOS: 'nexos.ai', XAI: 'xAI Grok' };
+const PROVIDERS = ['LOCAL', 'DUAL', 'NEXOS', 'XAI'];
+const PROVIDER_LABELS = { LOCAL: 'Local RTX', DUAL: 'Dual GPU', NEXOS: 'nexos.ai', XAI: 'xAI Grok' };
 let currentProvider = 0;
 let ws = null;
 let isStreaming = false;
@@ -748,7 +748,7 @@ function addMeta(msgEl, provider) {
   const meta = document.createElement('div');
   meta.className = 'meta';
   const label = PROVIDER_LABELS[provider] || provider;
-  const badgeClass = provider === 'LOCAL' ? 'local' : provider === 'NEXOS' ? 'nexos' : 'xai';
+  const badgeClass = provider === 'LOCAL' ? 'local' : provider === 'DUAL' ? 'local' : provider === 'NEXOS' ? 'nexos' : 'xai';
   meta.innerHTML = `<span class="provider-badge ${badgeClass}">${label}</span>`;
   msgEl.appendChild(meta);
 }

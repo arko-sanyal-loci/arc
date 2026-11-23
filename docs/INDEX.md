@@ -92,6 +92,8 @@ All dispatched through `POST /mcp` with `{"method": "tools/call", "params": {"na
 |---|---|---|
 | `ARC_NEXOS_KEY` | — | nexos.ai API key (primary name) |
 | `NEXOS_API_KEY` | — | nexos.ai API key (legacy fallback) |
+| `ARC_NEXOS_BASE_URL` | `https://api.nexos.ai/v1` | OpenAI-compatible NEXOS/Hostinger gateway |
+| `ARC_NEXOS_MODEL` | `meta-llama/llama-3.3-70b-instruct` | Fallback model for heavy complexity |
 | `ARC_XAI_KEY` | — | xAI (Grok) API key (primary name) |
 | `XAI_API_KEY` | — | xAI API key (legacy fallback) |
 | `ARC_LOCAL_API_KEY` | — | Local model API key |

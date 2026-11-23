@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
+from core.platform_paths import default_shm_path
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -40,9 +41,9 @@ ARC_LOW_WATER_MB  = 4_096   # never spill to Arc if Arc free < 4 GB
 # NOTE: arc_offload_ring is a raw 4 MiB file pre-allocated by start.sh for the
 #       future zero-copy DMA ring.  SHMStager uses a *separate* directory for
 #       its JSON/blob manifest files so the two never conflict.
-SHM_OFFLOAD_RING  = "/dev/shm/arc_offload_ring"   # raw ring file (DMA, future)
-SHM_OFFLOAD_PATH  = "/dev/shm/arc_offload_stage"  # SHMStager blob directory
-OFFLOAD_STATE_PATH = "/dev/shm/arc_offload_state.json"
+SHM_OFFLOAD_RING  = default_shm_path("arc_offload_ring")   # raw ring file (DMA, future)
+SHM_OFFLOAD_PATH  = default_shm_path("arc_offload_stage")  # SHMStager blob directory
+OFFLOAD_STATE_PATH = default_shm_path("arc_offload_state.json")
 
 
 class OffloadDir(Enum):
@@ -57,6 +58,9 @@ class VRAMStats:
     total_mb:   int
     used_mb:    int
     free_mb:    int
+    telemetry_available: bool = False
+    telemetry_source: str = "unavailable"
+    gpu_util_pct: float | None = None
     timestamp:  float = field(default_factory=time.time)
 
     @property
@@ -75,52 +79,109 @@ class OffloadDecision:
 
 # ── VRAM query ─────────────────────────────────────────────────────────────────
 
-def _nvidia_smi_free_mb(gpu_index: int = 0) -> Optional[int]:
-    """Query free VRAM on an NVIDIA GPU via nvidia-smi."""
+def _nvidia_gpu_metrics(gpu_index: int = 0) -> Optional[tuple[int, int, float]]:
+    """Return NVIDIA used MB, free MB, and utilization percentage."""
     try:
         out = subprocess.check_output(
             ["nvidia-smi",
              f"--id={gpu_index}",
-             "--query-gpu=memory.free",
+             "--query-gpu=memory.used,memory.free,utilization.gpu",
              "--format=csv,noheader,nounits"],
             stderr=subprocess.DEVNULL,
             timeout=3,
         ).decode().strip()
-        return int(out)
+        used, free, utilization = [part.strip() for part in out.split(",", 2)]
+        return int(used), int(free), float(utilization)
     except (subprocess.CalledProcessError, FileNotFoundError, ValueError, subprocess.TimeoutExpired):
         return None
 
 
-def _intel_gpu_free_mb() -> Optional[int]:
-    """
-    Query free VRAM on Intel Arc via intel_gpu_top / sysfs.
-    Falls back to a heuristic if the tool is unavailable.
-    """
-    # Try sysfs (xe driver, Linux 6.8+)
-    sysfs_paths = list(Path("/sys/class/drm").glob("card*/device/xe/*/gt/gt0/mem_busy"))
-    if sysfs_paths:
-        try:
-            val = int(sysfs_paths[0].read_text().strip())
-            # val is 0-100 utilisation; derive free from total
-            used_mb = int(ARC_TOTAL_MB * val / 100)
-            return ARC_TOTAL_MB - used_mb
-        except (OSError, ValueError):
-            pass
+def _intel_gpu_metrics() -> Optional[tuple[int, int, float]]:
+    """Sample Intel GPU telemetry when CAP_PERFMON is available.
 
-    # Fallback: assume 24 GB free if driver not available yet
-    return ARC_TOTAL_MB - 8_000  # conservative placeholder
+    No synthetic utilization is reported: an unavailable PMU is represented
+    as unavailable rather than as fake VRAM usage.
+    """
+    try:
+        output = subprocess.check_output(
+            [
+                "intel_gpu_top",
+                "-d", "pci:vendor=8086,device=e223",
+                "-J", "-s", "100", "-o", "-",
+            ],
+            stderr=subprocess.DEVNULL,
+            timeout=2.5,
+        ).decode("utf-8", errors="replace")
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return None
+
+    payloads = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            payloads.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    if not payloads:
+        return None
+
+    payload = payloads[-1]
+    busy_values: list[float] = []
+    memory_used_mb: Optional[int] = None
+
+    def walk(value: object, key: str = "") -> None:
+        nonlocal memory_used_mb
+        if isinstance(value, dict):
+            for child_key, child_value in value.items():
+                normalized = child_key.lower().replace("_", "-")
+                if normalized == "busy" and isinstance(child_value, (int, float)):
+                    busy_values.append(float(child_value))
+                if normalized in {"used", "used-mb", "used-bytes"} and isinstance(
+                    child_value, (int, float)
+                ) and ("mem" in key or "memory" in key):
+                    number = float(child_value)
+                    memory_used_mb = int(number / (1024 * 1024)) if "byte" in normalized else int(number)
+                walk(child_value, normalized)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child, key)
+
+    walk(payload)
+    if not busy_values:
+        return None
+    utilization = max(0.0, min(100.0, sum(busy_values) / len(busy_values)))
+    used = max(0, min(ARC_TOTAL_MB, memory_used_mb or 0))
+    return used, ARC_TOTAL_MB - used, utilization
 
 
 def query_vram(lane: int) -> VRAMStats:
     """Return current VRAM stats for the given lane."""
     if lane == LANE_RTX:
-        free = _nvidia_smi_free_mb(gpu_index=0) or (RTX_TOTAL_MB - 4_000)
-        used = RTX_TOTAL_MB - free
-        return VRAMStats(lane=LANE_RTX, total_mb=RTX_TOTAL_MB, used_mb=used, free_mb=free)
+        metrics = _nvidia_gpu_metrics(gpu_index=0)
+        if metrics:
+            used, free, _utilization = metrics
+            return VRAMStats(
+                lane=LANE_RTX, total_mb=RTX_TOTAL_MB, used_mb=used, free_mb=free,
+                telemetry_available=True, telemetry_source="nvidia-smi",
+                gpu_util_pct=metrics[2],
+            )
+        return VRAMStats(
+            lane=LANE_RTX, total_mb=RTX_TOTAL_MB, used_mb=0, free_mb=RTX_TOTAL_MB,
+        )
     else:  # LANE_ARC
-        free = _intel_gpu_free_mb() or (ARC_TOTAL_MB - 8_000)
-        used = ARC_TOTAL_MB - free
-        return VRAMStats(lane=LANE_ARC, total_mb=ARC_TOTAL_MB, used_mb=used, free_mb=free)
+        metrics = _intel_gpu_metrics()
+        if metrics:
+            used, free, _utilization = metrics
+            return VRAMStats(
+                lane=LANE_ARC, total_mb=ARC_TOTAL_MB, used_mb=used, free_mb=free,
+                telemetry_available=True, telemetry_source="intel-gpu-top",
+                gpu_util_pct=metrics[2],
+            )
+        return VRAMStats(
+            lane=LANE_ARC, total_mb=ARC_TOTAL_MB, used_mb=0, free_mb=ARC_TOTAL_MB,
+        )
 
 
 # ── Offload policy ─────────────────────────────────────────────────────────────

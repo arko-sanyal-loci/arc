@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import Callable, Coroutine
+from core.platform_paths import default_shm_path
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ HEARTBEAT_TICK_S:     float = HEARTBEAT_TICK_MS / 1000.0  # 0.140
 MISSED_TICKS_WARN:    int = 3
 MISSED_TICKS_FAIL:    int = 10
 
-SHM_PATH:             str = "/dev/shm/arc_heartbeat"
+SHM_PATH:             str = default_shm_path("arc_heartbeat")
 SHM_RING_SIZE:        int = 4096   # bytes, holds ~200 tick records
 TICK_RECORD_FMT:      str = "<QHH"  # timestamp_us (8), tick_id (2), lane_mask (2)
 TICK_RECORD_SIZE:     int = struct.calcsize(TICK_RECORD_FMT)  # 12 bytes
@@ -126,7 +127,7 @@ class HeartbeatEngine:
         tick_ms:        int = HEARTBEAT_TICK_MS,
         sync_every_n:   int = 50,
         shm_path:       str = SHM_PATH,
-        status_path:    str = "/dev/shm/arc_status.json",
+        status_path:    str = default_shm_path("arc_status.json"),
     ) -> None:
         self._tick_interval = tick_ms / 1000.0
         self._sync_every_n  = sync_every_n

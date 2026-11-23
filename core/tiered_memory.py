@@ -45,6 +45,7 @@ from core.heat import (
     tier as heat_tier_label,
     vram_eligible,
 )
+from core.platform_paths import DATA_DIR, default_shm_path
 
 # ── Tier enum ────────────────────────────────────────────────────────────────
 
@@ -175,13 +176,13 @@ class TieredMemoryManager:
 
     def __init__(
         self,
-        nvme_base_path: str = "data/",
-        shm_state_path: str = "/dev/shm/arc_tier_state.json",
+        nvme_base_path: str | None = None,
+        shm_state_path: str | None = None,
         ddr5_total_mb:  int = 32_768,
         vram_total_mb:  int = 48_152,
     ):
-        self.nvme_base   = Path(nvme_base_path)
-        self.shm_path    = shm_state_path
+        self.nvme_base   = Path(nvme_base_path or DATA_DIR)
+        self.shm_path    = shm_state_path or default_shm_path("arc_tier_state.json")
         # RLock (reentrant) so place()/update_heat() can call _publish_state()
         # without deadlocking — both hold the lock before the nested acquire.
         self._lock       = threading.RLock()

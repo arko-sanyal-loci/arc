@@ -38,6 +38,7 @@ from typing import AsyncGenerator, Optional
 import aiohttp
 
 from core.cache_layer import PromptCacheLayer, CacheTTL, LociItem, cache_layer  # noqa: F401
+from core.platform_paths import default_shm_path
 
 
 # ── Provider definitions ───────────────────────────────────────────────────────
@@ -61,8 +62,12 @@ PROVIDER_ENDPOINTS = {
     Provider.LOCAL_SGLANG: os.environ.get(
         "LOCI_LOCAL_SGLANG_BASE_URL", "http://localhost:7000/v1"
     ),
-    Provider.NEXOS:  "https://api.nexos.ai/v1",
-    Provider.XAI:    "https://api.x.ai/v1",
+    Provider.NEXOS:  os.environ.get(
+        "ARC_NEXOS_BASE_URL", "https://api.nexos.ai/v1"
+    ),
+    Provider.XAI:    os.environ.get(
+        "ARC_XAI_BASE_URL", "https://api.x.ai/v1"
+    ),
 }
 
 # The workstation's adaptive local gateway exposes OpenAI-compatible chat at
@@ -74,8 +79,10 @@ PROVIDER_MODELS = {
     Provider.LOCAL:        os.environ.get("LOCI_LOCAL_MODEL", "arc-local"),
     Provider.LOCAL_INTEL:  os.environ.get("LOCI_LOCAL_INTEL_MODEL", "arc-b70"),
     Provider.LOCAL_SGLANG: os.environ.get("LOCI_LOCAL_SGLANG_MODEL", "arc-b70-sglang"),
-    Provider.NEXOS:        "meta-llama/llama-3.3-70b-instruct",  # default; overridable
-    Provider.XAI:          "grok-2",
+    Provider.NEXOS:        os.environ.get(
+        "ARC_NEXOS_MODEL", "meta-llama/llama-3.3-70b-instruct"
+    ),
+    Provider.XAI:          os.environ.get("ARC_XAI_MODEL", "grok-2"),
 }
 
 # Routing table: model size → preferred provider
@@ -91,7 +98,7 @@ def provider_for_model(model_name: str) -> Provider:
         return Provider.LOCAL_INTEL
     return Provider.LOCAL
 
-HEALTH_PATH = "/dev/shm/arc_api_health.json"
+HEALTH_PATH = default_shm_path("arc_api_health.json")
 
 
 @dataclass
@@ -317,14 +324,14 @@ class APIProvisioner:
         Follow the priority chain, falling back on health.
 
         Chains:
-          LOCAL        → LOCAL only (sovereignty; no API fallback for embed/small)
+          LOCAL        → LOCAL → LOCAL_INTEL → NEXOS → XAI
           LOCAL_INTEL  → LOCAL_INTEL → NEXOS → XAI
           LOCAL_SGLANG → LOCAL_SGLANG → LOCAL_INTEL → NEXOS → XAI
           NEXOS        → NEXOS → XAI
           XAI          → XAI only
         """
         chains: dict[Provider, list[Provider]] = {
-            Provider.LOCAL:        [Provider.LOCAL],
+            Provider.LOCAL:        [Provider.LOCAL, Provider.LOCAL_INTEL, Provider.NEXOS, Provider.XAI],
             Provider.LOCAL_INTEL:  [Provider.LOCAL_INTEL, Provider.NEXOS, Provider.XAI],
             Provider.LOCAL_SGLANG: [Provider.LOCAL_SGLANG, Provider.LOCAL_INTEL, Provider.NEXOS, Provider.XAI],
             Provider.NEXOS:        [Provider.NEXOS, Provider.XAI],
@@ -332,7 +339,12 @@ class APIProvisioner:
         }
         for p in chains.get(requested, [requested]):
             h = self._health.get(p)
-            if h and h.reachable:
+            local_provider = p in (
+                Provider.LOCAL,
+                Provider.LOCAL_INTEL,
+                Provider.LOCAL_SGLANG,
+            )
+            if h and h.reachable and (local_provider or h.api_ready):
                 return p
         # Last resort: return requested even if unhealthy
         return requested

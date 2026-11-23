@@ -19,6 +19,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional
+from core.platform_paths import default_shm_path
 
 # Loci modules (copied into arc-runtime/loci/)
 import sys
@@ -29,11 +30,14 @@ from reconcile_tick import ReconcileTicker, ReconcileResult, DriftKind  # noqa: 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
-ENGINE_STATE_PATH  = "/dev/shm/arc_engine_state.json"
-HEARTBEAT_SHM_PATH = "/dev/shm/arc_heartbeat"
-STATUS_SHM_PATH    = "/dev/shm/arc_status.json"
+ENGINE_STATE_PATH  = default_shm_path("arc_engine_state.json")
+HEARTBEAT_SHM_PATH = default_shm_path("arc_heartbeat")
+STATUS_SHM_PATH    = default_shm_path("arc_status.json")
 
-DEFAULT_DB_PATH    = str(Path(__file__).parent.parent / "data" / "arc.db")
+DEFAULT_DB_PATH    = str(Path(os.environ.get(
+    "ARC_ENGINE_DB_PATH",
+    str(Path(__file__).parent.parent / "data" / "arc.db"),
+)).expanduser())
 
 
 # ── Engine state snapshot ─────────────────────────────────────────────────────
