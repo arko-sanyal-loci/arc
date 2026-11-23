@@ -1,0 +1,40 @@
+{
+  "run_id": "retrieval-20261120T045215Z-66e48403",
+  "created_utc": "2026-11-20T04:52:15.669668+00:00",
+  "retriever": "Nomic embeddings; cosine top-k from five fictional records",
+  "query": "From record AT-7 only, return the exact sensor value, filter and shelf with times. If AT-7 is absent, say unavailable; never borrow details from another record.",
+  "ranking": [
+    {
+      "id": "AT-10",
+      "score": 0.8038669250793413
+    },
+    {
+      "id": "AT-8",
+      "score": 0.7996629581291829
+    },
+    {
+      "id": "AT-9",
+      "score": 0.7958937219994465
+    },
+    {
+      "id": "AT-7",
+      "score": 0.767292122482943
+    },
+    {
+      "id": "AT-11",
+      "score": 0.6128511726749164
+    }
+  ],
+  "target_id": "AT-7",
+  "models": {
+    "4b": "qwen3.5:4b-q4_K_M",
+    "8b": "qwen3-vl:8b-instruct",
+    "26b_moe": "gemma4:26b-a4b-it-q4_K_M",
+    "27b": "qwen3.6:27b-q4_K_M"
+  },
+  "endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "privacy": "fictional data only"
+}

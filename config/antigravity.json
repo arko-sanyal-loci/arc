@@ -1,0 +1,105 @@
+{
+  "_comment": "Antigravity 2.0 IDE configuration for Arc interactive window",
+  "_version": "2.0",
+  "_doc": "https://antigravity.dev/docs/config",
+
+  "workspace": {
+    "name": "Arc Runtime",
+    "root": ".",
+    "icon": "🤖",
+    "theme": "dark"
+  },
+
+  "agent": {
+    "name": "Arc",
+    "description": "Loci-powered local AI with dynamic GPU offloading",
+    "entrypoint": "app/server.py",
+    "runtime": "python",
+    "client_compatibility": "claude",
+    "runtime_label": "plaude bonnet",
+    "port": 7860
+  },
+
+  "mcp": {
+    "enabled": true,
+    "endpoint": "http://localhost:7860/mcp",
+    "tools": [
+      "arc_chat",
+      "arc_memory_search",
+      "arc_status",
+      "arc_workspace_list",
+      "arc_workspace_read",
+      "arc_workspace_write",
+      "arc_workspace_check",
+      "arc_scratch_write",
+      "arc_scratch_read",
+      "arc_scratch_clear"
+    ],
+    "auto_connect": true
+  },
+
+  "panels": [
+    {
+      "id": "chat",
+      "type": "chat",
+      "title": "Arc Chat",
+      "url": "http://localhost:7860",
+      "position": "center",
+      "default": true
+    },
+    {
+      "id": "status",
+      "type": "iframe",
+      "title": "Engine Status",
+      "url": "http://localhost:7860/api/status",
+      "position": "right",
+      "width": 320,
+      "refresh_ms": 5000
+    },
+    {
+      "id": "memory",
+      "type": "custom",
+      "title": "Memory Explorer",
+      "tool": "arc_memory_search",
+      "position": "bottom",
+      "height": 240
+    }
+  ],
+
+  "keybindings": [
+    { "key": "ctrl+shift+a", "command": "arc.focusChat" },
+    { "key": "ctrl+shift+m", "command": "arc.openMemorySearch" },
+    { "key": "ctrl+shift+s", "command": "arc.showStatus" }
+  ],
+
+  "tasks": [
+    {
+      "label": "Start Arc",
+      "type": "shell",
+      "command": "bash start.sh",
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+    {
+      "label": "Run Heartbeat Test",
+      "type": "shell",
+      "command": "python -m pytest tests/ -v -k heartbeat",
+      "group": "test"
+    },
+    {
+      "label": "Run Bus Benchmark",
+      "type": "shell",
+      "command": "python tests/bench_bus_fidelity.py",
+      "group": "test"
+    }
+  ],
+
+  "extensions": {
+    "mcp_client": true,
+    "live_preview": true,
+    "agent_logs": true
+  },
+
+  "env_file": ".env",
+  "log_file": "logs/arc.log"
+}

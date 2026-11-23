@@ -1,0 +1,33 @@
+{
+  "run_id": "matrix-20261120T044511Z-a31634ae",
+  "created_utc": "2026-11-20T04:45:11.968756+00:00",
+  "purpose": "synthetic model\u00d7GPU paired comparison",
+  "models": {
+    "4b": "qwen3.5:4b-q4_K_M",
+    "26b_moe": "gemma4:26b-a4b-it-q4_K_M"
+  },
+  "model_inventory": {
+    "4b": "qwen3.5:4b-q4_K_M",
+    "8b": "qwen3-vl:8b-instruct",
+    "26b_moe": "gemma4:26b-a4b-it-q4_K_M",
+    "27b": "qwen3.6:27b-q4_K_M"
+  },
+  "endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "rounds": 2,
+  "cases": [
+    "recall_exact",
+    "temporal_conflict",
+    "shader_packet",
+    "audio_features",
+    "grounded_abstention",
+    "vision_fixture"
+  ],
+  "context_tokens": 4096,
+  "max_output_tokens": 160,
+  "reasoning_mode": false,
+  "image_fixture": "synthetic_shader_like_fixture.png",
+  "privacy": "fictional fixtures only; no user or private account content"
+}

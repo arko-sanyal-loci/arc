@@ -1,0 +1,98 @@
+{
+  "schema": "musicsymprev.v1",
+  "scope": "Original synthesized score, fixed scene. No spoken audio, measured listener ratings, or claim of real-time recognition.",
+  "qSympRev": {
+    "minor-early": {
+      "known_score": {
+        "tempo_bpm": 100,
+        "meter": "4/4",
+        "mode": "minor",
+        "chord_midi": [
+          48,
+          63,
+          67
+        ],
+        "orchestral_synth_parts": {
+          "strings": "Slow attack, sustained low-mid tones, light vibrato",
+          "woodwind": "Soft, rounded lead with a quieter upper harmonic",
+          "brass": "Short, bright harmonic accents",
+          "percussion": "Sharp beat attacks with descending low-frequency tails"
+        }
+      },
+      "scene": {
+        "line_at_seconds": 4.8,
+        "line": "You look like hell. I'm glad you made it back.",
+        "written_stress_pattern": "you LOOK | like HELL | i'm GLAD | you MADE | it BACK"
+      },
+      "cue": {
+        "score_dip_start_seconds": 4.2,
+        "cue_minus_line_seconds": -0.6,
+        "mixed_score_rms_in_final_150ms_before_line": 0.01854
+      },
+      "audio": "minor-early.wav"
+    },
+    "minor-late": {
+      "known_score": {
+        "tempo_bpm": 100,
+        "meter": "4/4",
+        "mode": "minor",
+        "chord_midi": [
+          48,
+          63,
+          67
+        ],
+        "orchestral_synth_parts": {
+          "strings": "Slow attack, sustained low-mid tones, light vibrato",
+          "woodwind": "Soft, rounded lead with a quieter upper harmonic",
+          "brass": "Short, bright harmonic accents",
+          "percussion": "Sharp beat attacks with descending low-frequency tails"
+        }
+      },
+      "scene": {
+        "line_at_seconds": 4.8,
+        "line": "You look like hell. I'm glad you made it back.",
+        "written_stress_pattern": "you LOOK | like HELL | i'm GLAD | you MADE | it BACK"
+      },
+      "cue": {
+        "score_dip_start_seconds": 5.4,
+        "cue_minus_line_seconds": 0.6,
+        "mixed_score_rms_in_final_150ms_before_line": 0.15451
+      },
+      "audio": "minor-late.wav"
+    },
+    "major-early": {
+      "known_score": {
+        "tempo_bpm": 100,
+        "meter": "4/4",
+        "mode": "major",
+        "chord_midi": [
+          48,
+          64,
+          67
+        ],
+        "orchestral_synth_parts": {
+          "strings": "Slow attack, sustained low-mid tones, light vibrato",
+          "woodwind": "Soft, rounded lead with a quieter upper harmonic",
+          "brass": "Short, bright harmonic accents",
+          "percussion": "Sharp beat attacks with descending low-frequency tails"
+        }
+      },
+      "scene": {
+        "line_at_seconds": 4.8,
+        "line": "You look like hell. I'm glad you made it back.",
+        "written_stress_pattern": "you LOOK | like HELL | i'm GLAD | you MADE | it BACK"
+      },
+      "cue": {
+        "score_dip_start_seconds": 4.2,
+        "cue_minus_line_seconds": -0.6,
+        "mixed_score_rms_in_final_150ms_before_line": 0.0186
+      },
+      "audio": "major-early.wav"
+    }
+  },
+  "iSympRev": {
+    "status": "hypothesis",
+    "timing": "An early dip may make space for concern. A late dip may let the same line read as banter before the mood settles.",
+    "mode": "Changing the third with the timing fixed can change the shade of the moment. Test which description listeners hear."
+  }
+}

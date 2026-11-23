@@ -1,0 +1,45 @@
+{
+  "run_id": "context-20261120T044809Z-e2eda387",
+  "created_utc": "2026-11-20T04:48:11.514982+00:00",
+  "method": "pinned mr-calendar/context_compaction.py LOCI TfidfCompressor, threshold 6500 chars; Nomic top-1 semantic retrieval from isolated synthetic corpus; direct Ollama chat",
+  "original_char_count": 22231,
+  "compacted_char_count": 6396,
+  "original_messages": 22,
+  "compacted_messages": 7,
+  "fact_in_original": true,
+  "fact_in_compacted": true,
+  "retrieved_top1_id": "AT-10",
+  "retrieval_top_k": [
+    {
+      "id": "AT-10",
+      "cosine": 0.8692865231383912
+    },
+    {
+      "id": "AT-9",
+      "cosine": 0.8533847099670796
+    },
+    {
+      "id": "AT-8",
+      "cosine": 0.8532049146728846
+    },
+    {
+      "id": "AT-7",
+      "cosine": 0.8440364946066816
+    },
+    {
+      "id": "AT-11",
+      "cosine": 0.5899215413835563
+    }
+  ],
+  "retrieval_expected_top1": "AT-7",
+  "question": "For record AT-7, give the exact sensor value and unit at 07:18, the filter at 07:25, and shelf at 07:40.",
+  "models": {
+    "8b": "qwen3-vl:8b-instruct",
+    "27b": "qwen3.6:27b-q4_K_M"
+  },
+  "endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "privacy": "fictional data only"
+}
