@@ -107,6 +107,9 @@ Environment="OLLAMA_MAX_LOADED_MODELS=2"
 SYSTEMD
 systemctl daemon-reload
 systemctl enable ollama 2>/dev/null || true
+systemctl start ollama 2>/dev/null \
+    && info "  Ollama started  ✓" \
+    || warn "  Ollama enabled but could not start yet — check: systemctl status ollama"
 info "  Ollama systemd unit configured for RTX  ✓"
 
 # ── 4. vLLM / SGLang for Arc (deep lane) ─────────────────────────────────────
@@ -143,6 +146,9 @@ WantedBy=multi-user.target
 SYSTEMD
 systemctl daemon-reload
 systemctl enable loci-arc-inference 2>/dev/null || true
+systemctl start loci-arc-inference 2>/dev/null \
+    && info "  Arc inference service started  ✓" \
+    || warn "  Arc inference service enabled but could not start yet — check: systemctl status loci-arc-inference"
 info "  Arc inference systemd service created  ✓"
 
 # ── 5. Environment variables in .bashrc / .profile ───────────────────────────
@@ -199,6 +205,7 @@ echo ""
 echo "Services:"
 echo "  systemctl status ollama"
 echo "  systemctl status loci-arc-inference"
+echo "  systemctl enable --now ollama loci-arc-inference"
 echo ""
 echo "Quick start:"
 echo "  source ~/.bashrc && loci-activate"

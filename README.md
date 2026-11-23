@@ -38,6 +38,8 @@ current limits of TRS/A/V semantic retrieval, see
 [Agent feedback and semantic streams](docs/AGENT-FEEDBACK-AND-STREAMS.md).
 For the current UI, animation, workstation setup, and VPS continuity status,
 see [Arc experience status](docs/ARC-EXPERIENCE-STATUS.md).
+For the Claude capability comparison and low-tier VPS deployment boundary, see
+[Arc and Claude capability matrix](docs/CLAUDE-PARITY-MATRIX.md).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
