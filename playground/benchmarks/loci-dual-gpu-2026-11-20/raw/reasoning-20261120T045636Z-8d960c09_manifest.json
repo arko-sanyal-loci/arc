@@ -1,0 +1,17 @@
+{
+  "run_id": "reasoning-20261120T045636Z-8d960c09",
+  "created_utc": "2026-11-20T05:00:11.077324+00:00",
+  "test": "think=true final answer completion; 1024-token generation budget",
+  "models": {
+    "4b": "qwen3.5:4b-q4_K_M",
+    "26b_moe": "gemma4:26b-a4b-it-q4_K_M",
+    "27b": "qwen3.6:27b-q4_K_M"
+  },
+  "endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "privacy": "fictional evidence only",
+  "reasoning_privacy": "internal thinking text intentionally not stored; only character count is recorded",
+  "prompt": "Use the fictional records to validate the conflict rule and produce only final JSON with current_status, source, time, preserved_older_status, and a one-sentence limitation. Rules: for same source choose later timestamp; a lower-priority source does not override a higher-priority source. Records: panel A, 09:00, amber; panel A, 09:07, green; panel B, 09:12, amber, lower priority. Do not infer real-world meaning."
+}

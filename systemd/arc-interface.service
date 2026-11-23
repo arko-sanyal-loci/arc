@@ -1,0 +1,31 @@
+[Unit]
+Description=Arc local interface and memory API
+Wants=arc-nomic-tunnel.service
+After=default.target arc-nomic-tunnel.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/arko-sanyal-loci/arc-canonical
+EnvironmentFile=-%h/.config/loci/arc-evidence-token
+EnvironmentFile=-%h/.config/loci/arc-provider-keys.env
+Environment=PYTHONUNBUFFERED=1
+Environment=LOCI_LOCAL_BASE_URL=http://127.0.0.1:11437/v1
+Environment=LOCI_LOCAL_MODEL=arc-local
+Environment=LOCI_LOCAL_HEALTH_URL=http://127.0.0.1:11437/health
+Environment=ARC_NOMIC_EMBED_BASE_URL=http://127.0.0.1:11435
+Environment=ARC_NOMIC_FALLBACK_URL=http://127.0.0.1:11438
+ExecStart=%h/src/arko-sanyal-loci/arc-canonical/.venv/bin/uvicorn server:app --app-dir app --host 127.0.0.1 --port 7860 --no-access-log
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/src/arko-sanyal-loci/arc-canonical/data
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=default.target

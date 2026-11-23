@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="72" viewBox="0 0 320 72" role="img" aria-labelledby="title desc">
+  <title id="title">Billo Tech</title>
+  <desc id="desc">Three rising bars inside a rounded tilted square, followed by the Billo Tech wordmark.</desc>
+  <g transform="translate(4 8) rotate(-8 28 28)">
+    <rect x="2" y="2" width="52" height="52" rx="14" fill="none" stroke="#425541" stroke-width="2"/>
+    <rect x="18" y="29" width="5" height="14" rx="2.5" fill="#84a957"/>
+    <rect x="27" y="17" width="5" height="26" rx="2.5" fill="#84a957"/>
+    <rect x="36" y="24" width="5" height="19" rx="2.5" fill="#84a957"/>
+  </g>
+  <text x="76" y="48" font-family="Inter, Avenir Next, Avenir, system-ui, sans-serif" font-size="36" font-weight="650" letter-spacing="-1.8" fill="#101712">Billo</text>
+  <text x="169" y="48" font-family="Inter, Avenir Next, Avenir, system-ui, sans-serif" font-size="36" font-weight="650" letter-spacing="-1.8" fill="#688445">Tech</text>
+</svg>

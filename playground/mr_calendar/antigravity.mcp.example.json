@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mr-calendar": {
+      "command": "/absolute/workspace/loci-memory-engine/.venv/bin/python",
+      "args": ["/absolute/workspace/arc-canonical/playground/mr_calendar/tools.py"],
+      "env": {
+        "MR_CALENDAR_LOCUS": "mr-calendar",
+        "MR_CALENDAR_VISION_PYTHON": "/absolute/workspace/playground/vision-hearing/.venv/bin/python"
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+    <title>Arc Browser</title>
+    <style>
+      :root { color-scheme: dark; font: 14px system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #111318; color: #e8eaf0; }
+      header { height: 58px; display: flex; gap: 8px; align-items: center; padding: 10px; border-bottom: 1px solid #2b2f3a; }
+      button { min-width: 34px; height: 34px; border: 1px solid #3b4150; border-radius: 7px; background: #1b1f29; color: inherit; cursor: pointer; }
+      button:hover { background: #272d3a; }
+      input { flex: 1; height: 34px; padding: 0 12px; border: 1px solid #3b4150; border-radius: 7px; background: #0c0e12; color: inherit; }
+      #title { max-width: 220px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #9da5b5; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <button id="back" aria-label="Back">←</button>
+      <button id="forward" aria-label="Forward">→</button>
+      <button id="reload" aria-label="Reload">↻</button>
+      <input id="address" aria-label="Address or search" placeholder="Enter a URL or search">
+      <button id="go">Go</button>
+      <span id="title"></span>
+    </header>
+    <script>
+      const address = document.getElementById("address");
+      const go = () => window.arcBrowser.navigate(address.value);
+      document.getElementById("go").addEventListener("click", go);
+      address.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") go();
+      });
+      document.getElementById("back").addEventListener("click", () => window.arcBrowser.back());
+      document.getElementById("forward").addEventListener("click", () => window.arcBrowser.forward());
+      document.getElementById("reload").addEventListener("click", () => window.arcBrowser.reload());
+      window.arcBrowser.onState((state) => {
+        address.value = state.url;
+        document.getElementById("title").textContent = state.title || "";
+        document.getElementById("back").disabled = !state.canGoBack;
+        document.getElementById("forward").disabled = !state.canGoForward;
+      });
+    </script>
+  </body>
+</html>

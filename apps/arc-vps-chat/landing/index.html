@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Billo Tech develops LOCI, a research-driven memory engine for more useful, traceable and recoverable AI systems.">
+  <meta name="theme-color" content="#101b25">
+  <title>Billo Tech — LOCI memory for AI systems</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #edf5f2;
+      --muted: #a7b9b4;
+      --surface: #17252e;
+      --line: #31444b;
+      --accent: #82e0ba;
+      --accent-2: #b6d6ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #101b25;
+      color: var(--ink);
+      font: 16px/1.65 system-ui, sans-serif;
+    }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 3px solid var(--accent-2); outline-offset: 3px; }
+    .wrap { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
+    header { border-bottom: 1px solid var(--line); }
+    nav { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 76px; }
+    .brand { color: var(--ink); font-size: 1.15rem; font-weight: 750; letter-spacing: .04em; text-decoration: none; }
+    .links { display: flex; gap: 22px; flex-wrap: wrap; }
+    .links a { color: var(--muted); text-decoration: none; }
+    .hero { padding: clamp(72px, 12vw, 132px) 0 84px; max-width: 860px; }
+    .eyebrow { color: var(--accent); font-size: .82rem; font-weight: 750; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { max-width: 780px; margin: 18px 0; font-size: clamp(2.5rem, 7vw, 5rem); line-height: 1.04; letter-spacing: -.045em; }
+    h2 { margin: 0 0 16px; font-size: clamp(1.7rem, 4vw, 2.4rem); line-height: 1.2; }
+    h3 { margin: 0 0 8px; line-height: 1.35; }
+    p { margin: 0 0 16px; color: var(--muted); }
+    .hero p { max-width: 720px; font-size: 1.15rem; }
+    .button {
+      display: inline-block; margin-top: 12px; padding: 11px 18px; border: 1px solid var(--accent);
+      border-radius: 999px; color: var(--ink); font-weight: 700; text-decoration: none;
+    }
+    section { padding: 68px 0; border-top: 1px solid var(--line); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 26px; }
+    .card { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+    .card p:last-child { margin-bottom: 0; }
+    .publication { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: start; }
+    .publication + .publication { margin-top: 14px; }
+    .publication a { white-space: nowrap; }
+    .note { padding: 18px 20px; border-left: 3px solid var(--accent-2); background: #17252e; }
+    .note p:last-child { margin-bottom: 0; }
+    footer { padding: 32px 0 48px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    @media (max-width: 640px) {
+      nav { align-items: flex-start; flex-direction: column; justify-content: center; padding: 15px 0; }
+      .links { gap: 14px; font-size: .92rem; }
+      .publication { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap" aria-label="Main navigation">
+      <a class="brand" href="/">BILLO TECH</a>
+      <div class="links">
+        <a href="#loci">LOCI engine</a>
+        <a href="#research">Publications</a>
+        <a href="/arko/chat">Arc chat</a>
+        <a href="/status">Service status</a>
+      </div>
+    </nav>
+  </header>
+  <main>
+    <div class="wrap">
+      <section class="hero" style="border-top:0">
+        <div class="eyebrow">Memory infrastructure for AI</div>
+        <h1>Make useful context last.</h1>
+        <p>Billo Tech develops LOCI: a research-driven memory engine for AI systems that need to retain relevant context, trace where it came from, and recover reliably across long-running work.</p>
+        <a class="button" href="#loci">Explore the LOCI approach</a>
+      </section>
+      <section id="arc-continuity">
+        <div class="eyebrow">A remote way to check in</div>
+        <h2>Arc continuity chat</h2>
+        <p>If the workstation is offline, the protected Arc chat remains hosted on the VPS. After sign-in, it can show the last workstation heartbeat and let you leave a message for continuity.</p>
+        <p>Chat history is encrypted before storage. The VPS uses its local Ollama model and does not control your workstation or connected devices.</p>
+        <a class="button" href="/arko/chat">Open protected Arc chat</a>
+      </section>
+      <section id="loci">
+        <div class="eyebrow">What LOCI is</div>
+        <h2>Persistent, inspectable memory—not a bigger prompt.</h2>
+        <p>LOCI (Layered Output and Context Intelligence) is an evolving architecture and codebase for organizing an agent's memory outside its immediate context window. It combines versioned facts, time- and relevance-aware retrieval, local persistence, and analytical feedback so an agent can recall what matters without treating every past message as equally useful.</p>
+        <div class="grid">
+          <article class="card">
+            <h3>Layered recall</h3>
+            <p>Heat and retrieval tiers help prioritize relevant, current information while keeping historical records available for review.</p>
+          </article>
+          <article class="card">
+            <h3>Traceable change</h3>
+            <p>Versioned facts and Glassbox review records make changes and routing decisions easier to inspect.</p>
+          </article>
+          <article class="card">
+            <h3>Quality-first work</h3>
+            <p>Routing favors the model and process that can meet the task's quality bar; resource savings are secondary.</p>
+          </article>
+          <article class="card">
+            <h3>Recovery in mind</h3>
+            <p>Local persistence, integrity checks, and encrypted backup workflows support deliberate recovery instead of silent fallback.</p>
+          </article>
+        </div>
+        <div class="note" style="margin-top:22px">
+          <p><strong>Current boundaries:</strong> LOCI and the Billo platform snapshot are not yet one integrated production runtime. Authenticated cross-runtime memory replication is not enabled. Hash-chain verification can reveal changes, but by itself cannot prevent a privileged host administrator from rewriting data and its verifier; stronger tamper evidence needs an independently controlled witness.</p>
+        </div>
+      </section>
+      <section id="research">
+        <div class="eyebrow">Research and public disclosures</div>
+        <h2>Publications</h2>
+        <p>Selected public research and technical disclosures associated with LOCI and its retrieval work.</p>
+        <article class="card publication">
+          <div>
+            <h3>LOCI: A Heat-Decaying, Goal-Conditioned Memory Architecture for Long-Horizon AI Agents</h3>
+            <p>Arko Sanyal and Independent Research · Technical Disclosure Commons · September 2026</p>
+          </div>
+          <a href="https://www.tdcommons.org/dpubs_series/11666">Read disclosure ↗</a>
+        </article>
+        <article class="card publication">
+          <div>
+            <h3>Category-Adaptive Recall Depth (CARD) for Heat-Tiered Memory Systems, with Experimental Validation on LongMemEval-500</h3>
+            <p>Arko Sanyal · Technical Disclosure Commons · July 2026</p>
+          </div>
+          <a href="https://www.tdcommons.org/dpubs_series/10856">Read disclosure ↗</a>
+        </article>
+        <article class="card publication">
+          <div>
+            <h3>Thermal Reasoning Substrate: A Heat-Driven Shared Memory Architecture for Parallel LLM Inference</h3>
+            <p>Arko Sanyal · Zenodo · July 2026 · OpenAlex lists this work as a preprint.</p>
+          </div>
+          <a href="https://doi.org/10.5281/zenodo.21188424">Read publication ↗</a>
+        </article>
+        <div class="note" style="margin-top:18px">
+          <p><strong>Benchmark transparency:</strong> LongMemEval figures reported in the disclosures have not been independently reproduced from run artifacts in this repository. Treat them as reported claims, not validated results.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer>
+    <div class="wrap">
+      <p>Billo Tech is the project's working identity. Research attribution and current readiness boundaries are documented in the source repository.</p>
+      <a href="/status">View service status</a>
+      <a href="/arko/chat">Open protected Arc chat</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,186 @@
+#cloud-config
+# =============================================================================
+# Ubuntu 26.04 LTS — Autoinstall (Subiquity) for Arc / LOCI workstation
+# =============================================================================
+# To use with the ISO:
+#   1. Create a USB with:  sudo dd if=ubuntu-26.04.1-desktop-amd64.iso of=/dev/sdX bs=4M status=progress
+#   2. Mount USB, place this file at:  /autoinstall.yaml  (root of USB)
+#   3. Add  autoinstall  to kernel cmdline or boot normally and select "Autoinstall"
+# =============================================================================
+autoinstall:
+  version: 1
+
+  # ── locale / keyboard ──────────────────────────────────────────────────────
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+    variant: ""
+
+  # ── network (DHCP during install) ─────────────────────────────────────────
+  network:
+    version: 2
+    ethernets:
+      enp0s3:
+        dhcp4: true
+    wifis: {}   # fill in if wireless
+
+  # ── storage — LVM on whole first disk ─────────────────────────────────────
+  # Adjust /dev/nvme0n1 to match your actual disk
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+    config:
+      - type: disk
+        id: disk0
+        path: /dev/nvme0n1
+        ptable: gpt
+        wipe: superblock
+        preserve: false
+        grub_device: true
+
+      - type: partition
+        id: part-efi
+        device: disk0
+        size: 1G
+        flag: boot
+        fs: fat32
+        mount: /boot/efi
+
+      - type: partition
+        id: part-boot
+        device: disk0
+        size: 2G
+        fs: ext4
+        mount: /boot
+
+      - type: partition
+        id: part-lvm
+        device: disk0
+        size: -1       # rest of disk
+
+      - type: lvm_volgroup
+        id: vg0
+        name: ubuntu-vg
+        devices: [part-lvm]
+
+      - type: lvm_partition
+        id: lv-root
+        volgroup: vg0
+        name: ubuntu-lv-root
+        size: 80G
+
+      - type: lvm_partition
+        id: lv-home
+        volgroup: vg0
+        name: ubuntu-lv-home
+        size: 100G
+
+      - type: lvm_partition
+        id: lv-data
+        volgroup: vg0
+        name: ubuntu-lv-data
+        size: -1       # rest for /data (models, datasets)
+
+      - type: format
+        id: fmt-root
+        volume: lv-root
+        fstype: ext4
+
+      - type: format
+        id: fmt-home
+        volume: lv-home
+        fstype: ext4
+
+      - type: format
+        id: fmt-data
+        volume: lv-data
+        fstype: ext4
+
+      - type: mount
+        id: mnt-root
+        device: fmt-root
+        path: /
+
+      - type: mount
+        id: mnt-home
+        device: fmt-home
+        path: /home
+
+      - type: mount
+        id: mnt-data
+        device: fmt-data
+        path: /data
+
+  # ── user ──────────────────────────────────────────────────────────────────
+  identity:
+    hostname: loci-workstation
+    username: arko-san
+    # Generate with: python3 -c "import crypt; print(crypt.crypt('yourpassword'))"
+    # Placeholder — replace before use:
+    password: "$6$rounds=4096$CHANGE_ME$PLACEHOLDER_HASH"
+    realname: "Arko Sanyal"
+
+  # ── SSH ───────────────────────────────────────────────────────────────────
+  ssh:
+    install-server: true
+    authorized-keys: []     # paste your id_ed25519.pub here
+    allow-pw: false         # disable password SSH once keys are added
+
+  # ── packages installed during setup ───────────────────────────────────────
+  packages:
+    # Core tools
+    - git
+    - curl
+    - wget
+    - build-essential
+    - python3-pip
+    - python3-venv
+    - python3-dev
+    - htop
+    - tmux
+    - vim
+    - neofetch
+    # GPU tools (base)
+    - pciutils
+    - hwinfo
+    - linux-firmware
+    - intel-gpu-tools
+    # Display stack
+    - mesa-utils
+    - vulkan-tools
+    - vainfo
+    # Misc
+    - jq
+    - rsync
+    - net-tools
+
+  # ── snaps ─────────────────────────────────────────────────────────────────
+  snaps:
+    - name: code          # VS Code
+      classic: true
+    - name: gh            # GitHub CLI
+
+  # ── late-commands (run in target after install) ───────────────────────────
+  late-commands:
+    # Set up /data ownership
+    - curtin in-target -- chown arko-san:arko-san /data
+    - curtin in-target -- chmod 755 /data
+    # Create LOCI workspace dirs
+    - curtin in-target -- mkdir -p /home/arko-san/arkos-loci-repos
+    - curtin in-target -- mkdir -p /data/models /data/datasets /data/checkpoints /data/cache
+    - curtin in-target -- chown -R arko-san:arko-san /home/arko-san /data
+    # Ensure sudoers
+    - curtin in-target -- usermod -aG sudo arko-san
+    # Disable sleep on workstation
+    - curtin in-target -- systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+  # ── user-data for first boot (cloud-init) ─────────────────────────────────
+  user-data:
+    runcmd:
+      - [bash, -c, "echo 'First boot complete' > /home/arko-san/INSTALL_DONE.txt"]
+
+  # ── updates ───────────────────────────────────────────────────────────────
+  updates: security
+
+  shutdown: reboot
