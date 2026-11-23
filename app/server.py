@@ -269,6 +269,7 @@ async def status():
                 "workspace": "bounded",
                 "scratchpad": "local",
                 "mcp": "enabled",
+                "browser": "visible-loopback-only",
             },
             "context_staging": {
                 "neighborhood_hops": 1,
@@ -1158,7 +1159,56 @@ MCP_TOOLS = [
             "additionalProperties": False,
         },
     },
+    {
+        "name": "arc_browser_navigate",
+        "description": "Navigate Arc's visible Chromium browser; adult domains are blocked by the desktop safety policy",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"url": {"type": "string", "maxLength": 2000}},
+            "required": ["url"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "arc_browser_mouse",
+        "description": "Move, click, type, or scroll inside Arc's visible Chromium browser only",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["move", "click", "type", "scroll"]},
+                "x": {"type": "number", "minimum": 0, "maximum": 10000},
+                "y": {"type": "number", "minimum": 0, "maximum": 10000},
+                "button": {"type": "string", "enum": ["left", "middle", "right"]},
+                "text": {"type": "string", "maxLength": 20000},
+                "delta_y": {"type": "number", "minimum": -10000, "maximum": 10000},
+            },
+            "required": ["action"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "arc_browser_sensitive_action",
+        "description": "Request one-shot user confirmation for a sensitive browser action",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"action": {"type": "string", "maxLength": 200}},
+            "required": ["action"],
+            "additionalProperties": False,
+        },
+    },
 ]
+
+
+async def _browser_bridge_call(path: str, payload: dict | None = None) -> dict:
+    """Call the loopback Electron browser bridge; never reaches the network."""
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        response = await client.request(
+            "POST" if payload is not None else "GET",
+            f"http://127.0.0.1:7861{path}",
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 @app.post("/mcp")
@@ -1257,6 +1307,56 @@ async def mcp_endpoint(request: Request):
             except (TypeError, ValueError) as exc:
                 return JSONResponse({"error": f"invalid scratchpad request: {str(exc)[:160]}"}, status_code=422)
             return {"content": [{"type": "text", "text": result}]}
+
+        if tool == "arc_browser_navigate":
+            try:
+                result = await _browser_bridge_call(
+                    "/navigate", {"url": args.get("url", "")}
+                )
+            except (httpx.HTTPError, OSError) as exc:
+                return JSONResponse(
+                    {"error": f"browser unavailable or navigation blocked: {str(exc)[:160]}"},
+                    status_code=503,
+                )
+            return {"content": [{"type": "text", "text": json.dumps(result)}]}
+
+        if tool == "arc_browser_mouse":
+            action = args.get("action")
+            routes = {
+                "move": ("/mouse-move", {"x": args.get("x"), "y": args.get("y")}),
+                "click": ("/click", {
+                    "x": args.get("x"), "y": args.get("y"),
+                    "button": args.get("button", "left"),
+                }),
+                "type": ("/type", {"text": args.get("text", "")}),
+                "scroll": ("/scroll", {
+                    "x": args.get("x"), "y": args.get("y"),
+                    "deltaY": args.get("delta_y", 0),
+                }),
+            }
+            if action not in routes:
+                return JSONResponse({"error": "invalid browser action"}, status_code=422)
+            route, payload = routes[action]
+            try:
+                result = await _browser_bridge_call(route, payload)
+            except (httpx.HTTPError, OSError) as exc:
+                return JSONResponse(
+                    {"error": f"browser unavailable or action rejected: {str(exc)[:160]}"},
+                    status_code=503,
+                )
+            return {"content": [{"type": "text", "text": json.dumps(result)}]}
+
+        if tool == "arc_browser_sensitive_action":
+            try:
+                result = await _browser_bridge_call(
+                    "/sensitive-action", {"action": args.get("action", "")}
+                )
+            except (httpx.HTTPError, OSError) as exc:
+                return JSONResponse(
+                    {"error": f"browser unavailable: {str(exc)[:160]}"},
+                    status_code=503,
+                )
+            return {"content": [{"type": "text", "text": json.dumps(result)}]}
 
     return JSONResponse({"error": f"unknown MCP method: {method}"}, status_code=400)
 

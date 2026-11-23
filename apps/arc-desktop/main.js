@@ -8,16 +8,19 @@ const {
   session,
 } = require("electron");
 const { spawn } = require("child_process");
+const { createServer } = require("http");
 const path = require("path");
 
 const port = Number(process.env.ARC_PORT || 7860);
 const host = process.env.ARC_HOST || "127.0.0.1";
 const runtimeUrl = `http://${host}:${port}`;
 const mediaUrl = process.env.ARC_MEDIA_URL || "http://127.0.0.1:11500";
+const browserControlPort = Number(process.env.ARC_BROWSER_CONTROL_PORT || 7861);
 const repoRoot = path.resolve(__dirname, "../..");
 let runtimeProcess = null;
 let browserWindow = null;
 let browserView = null;
+let browserControlServer = null;
 const blockedBrowserHosts = new Set([
   "porn.com",
   "pornhub.com",
@@ -86,6 +89,127 @@ function updateBrowserToolbar(extra = {}) {
     blocked: Boolean(extra.blocked),
     blockedUrl: extra.url || "",
   });
+}
+
+function browserState() {
+  return {
+    open: Boolean(browserView),
+    url: browserView?.webContents.getURL() || "",
+    title: browserView?.webContents.getTitle() || "",
+  };
+}
+
+function sendJson(response, status, value) {
+  response.writeHead(status, { "content-type": "application/json" });
+  response.end(JSON.stringify(value));
+}
+
+function startBrowserControlServer() {
+  if (browserControlServer) return;
+  browserControlServer = createServer(async (request, response) => {
+    if (request.headers.host && !request.headers.host.startsWith("127.0.0.1:")) {
+      sendJson(response, 403, { error: "loopback-only" });
+      return;
+    }
+
+    let body = {};
+    if (request.method === "POST") {
+      try {
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
+      } catch {
+        sendJson(response, 400, { error: "invalid JSON" });
+        return;
+      }
+    }
+
+    try {
+      if (request.method === "GET" && request.url === "/state") {
+        sendJson(response, 200, browserState());
+        return;
+      }
+      if (request.method !== "POST") {
+        sendJson(response, 405, { error: "method not allowed" });
+        return;
+      }
+
+      if (request.url === "/navigate") {
+        createBrowserWindow();
+        sendJson(response, loadBrowserUrl(body.url) ? 200 : 403, browserState());
+        return;
+      }
+      if (request.url === "/mouse-move") {
+        const { x, y } = body;
+        if (!browserView || !Number.isFinite(x) || !Number.isFinite(y)) {
+          sendJson(response, 400, { error: "browser or coordinates unavailable" });
+          return;
+        }
+        browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+      if (request.url === "/click") {
+        const { x, y, button = "left" } = body;
+        if (!browserView || !Number.isFinite(x) || !Number.isFinite(y)
+          || !["left", "middle", "right"].includes(button)) {
+          sendJson(response, 400, { error: "invalid browser click" });
+          return;
+        }
+        browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+        browserView.webContents.sendInputEvent({ type: "mouseDown", button });
+        browserView.webContents.sendInputEvent({ type: "mouseUp", button });
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+      if (request.url === "/type") {
+        if (!browserView || typeof body.text !== "string" || body.text.length > 20000) {
+          sendJson(response, 400, { error: "invalid browser text" });
+          return;
+        }
+        browserView.webContents.insertText(body.text);
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+      if (request.url === "/scroll") {
+        const { x, y, deltaY } = body;
+        if (!browserView || ![x, y, deltaY].every(Number.isFinite)) {
+          sendJson(response, 400, { error: "invalid browser scroll" });
+          return;
+        }
+        browserView.webContents.sendInputEvent({ type: "mouseMove", x, y });
+        browserView.webContents.sendInputEvent({ type: "mouseWheel", x, y, deltaY });
+        sendJson(response, 200, { ok: true });
+        return;
+      }
+      if (request.url === "/sensitive-action") {
+        if (typeof body.action !== "string" || body.action.length > 200) {
+          sendJson(response, 400, { error: "invalid sensitive action" });
+          return;
+        }
+        const result = await confirmSensitiveAction(body.action);
+        sendJson(response, 200, { allowed: result });
+        return;
+      }
+      sendJson(response, 404, { error: "unknown browser route" });
+    } catch (error) {
+      sendJson(response, 500, { error: error.message });
+    }
+  });
+  browserControlServer.listen(browserControlPort, "127.0.0.1");
+}
+
+function confirmSensitiveAction(action) {
+  if (!browserWindow || browserWindow.isDestroyed()) return Promise.resolve(false);
+  return dialog.showMessageBox(browserWindow, {
+    type: "warning",
+    buttons: ["Cancel", "Allow once"],
+    defaultId: 0,
+    cancelId: 0,
+    title: "Arc browser confirmation",
+    message: "Allow this sensitive browser action?",
+    detail: action,
+  }).then(({ response }) => response === 1);
 }
 
 function createBrowserWindow() {
@@ -234,6 +358,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  startBrowserControlServer();
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: ["*://*/*"] },
     (details, callback) => {
@@ -300,17 +425,8 @@ ipcMain.handle("browser-scroll", (_event, x, y, deltaY) => {
   return true;
 });
 ipcMain.handle("browser-sensitive-action", async (_event, action) => {
-  if (!browserWindow || typeof action !== "string" || action.length > 200) return false;
-  const { response } = await dialog.showMessageBox(browserWindow, {
-    type: "warning",
-    buttons: ["Cancel", "Allow once"],
-    defaultId: 0,
-    cancelId: 0,
-    title: "Arc browser confirmation",
-    message: "Allow this sensitive browser action?",
-    detail: action,
-  });
-  return response === 1;
+  if (typeof action !== "string" || action.length > 200) return false;
+  return confirmSensitiveAction(action);
 });
 
 app.on("window-all-closed", () => {
@@ -320,6 +436,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  browserControlServer?.close();
   if (runtimeProcess && !runtimeProcess.killed) {
     runtimeProcess.kill();
   }

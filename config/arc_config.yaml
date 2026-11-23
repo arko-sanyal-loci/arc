@@ -200,6 +200,9 @@ mcp:
     - arc_scratch_write
     - arc_scratch_read
     - arc_scratch_clear
+    - arc_browser_navigate
+    - arc_browser_mouse
+    - arc_browser_sensitive_action
 
 # ── Logging ────────────────────────────────────────────────────────────────
 logging:
