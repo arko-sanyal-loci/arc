@@ -65,6 +65,11 @@ PROVIDER_ENDPOINTS = {
     Provider.XAI:    "https://api.x.ai/v1",
 }
 
+# The workstation's adaptive local gateway exposes OpenAI-compatible chat at
+# /v1/chat/completions and a separate health endpoint. Keep this opt-in so
+# direct Ollama deployments can continue using the default /v1/models probe.
+LOCAL_HEALTH_ENDPOINT = os.environ.get("LOCI_LOCAL_HEALTH_URL", "").strip()
+
 PROVIDER_MODELS = {
     Provider.LOCAL:        os.environ.get("LOCI_LOCAL_MODEL", "arc-local"),
     Provider.LOCAL_INTEL:  os.environ.get("LOCI_LOCAL_INTEL_MODEL", "arc-b70"),
@@ -111,14 +116,16 @@ class APIKeys:
 
     @classmethod
     def from_config(cls, config_path: str = "config/arc_config.yaml") -> "APIKeys":
-        """Load keys from YAML config (plain-text; use env vars in production)."""
+        """Load provider keys from environment first, with YAML as a local fallback."""
         try:
             import yaml  # type: ignore
             cfg = yaml.safe_load(Path(config_path).read_text())
             keys = cfg.get("api_keys", {})
             return cls(
-                nexos=keys.get("nexos"),
-                xai=keys.get("xai"),
+                nexos=(os.environ.get("ARC_NEXOS_KEY") or os.environ.get("NEXOS_API_KEY")
+                       or keys.get("nexos")),
+                xai=(os.environ.get("ARC_XAI_KEY") or os.environ.get("XAI_API_KEY")
+                     or keys.get("xai")),
                 local=keys.get("local", "ollama"),
                 local_intel=keys.get("local_intel", "local"),
                 local_sglang=keys.get("local_sglang", "local"),
@@ -142,6 +149,8 @@ class APIKeys:
 class ProviderHealth:
     provider:       Provider
     reachable:      bool  = False
+    credential_configured: bool = False
+    api_ready:      bool  = False
     latency_ms:     float = 0.0
     last_checked:   float = field(default_factory=time.time)
     error:          str   = ""
@@ -164,23 +173,34 @@ async def _ping_provider(
     t0 = time.monotonic()
     try:
         async with session.get(
-            f"{endpoint}/models",
+            (LOCAL_HEALTH_ENDPOINT if provider == Provider.LOCAL and LOCAL_HEALTH_ENDPOINT
+             else f"{endpoint}/models"),
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=timeout),
         ) as resp:
             latency = (time.monotonic() - t0) * 1000
-            ok = resp.status in (200, 401)   # 401 = key invalid but endpoint alive
+            key_configured = bool(key) if provider in (Provider.NEXOS, Provider.XAI) else True
+            ok = resp.status in (200, 401)   # 401 means endpoint answered, not authorized inference
+            api_ready = resp.status == 200 and key_configured
+            error = "" if api_ready else (
+                "API key not configured" if provider in (Provider.NEXOS, Provider.XAI)
+                and not key_configured else f"HTTP {resp.status}"
+            )
             return ProviderHealth(
                 provider=provider,
                 reachable=ok,
+                credential_configured=key_configured,
+                api_ready=api_ready,
                 latency_ms=latency,
                 last_checked=time.time(),
-                error="" if ok else f"HTTP {resp.status}",
+                error=error,
             )
     except Exception as exc:
         return ProviderHealth(
             provider=provider,
             reachable=False,
+            credential_configured=bool(key) if provider in (Provider.NEXOS, Provider.XAI) else True,
+            api_ready=False,
             latency_ms=(time.monotonic() - t0) * 1000,
             last_checked=time.time(),
             error=str(exc),
@@ -202,6 +222,8 @@ async def health_check_all(keys: APIKeys) -> dict[Provider, ProviderHealth]:
         Path(HEALTH_PATH).write_text(json.dumps({
             p.name: {
                 "reachable":    h.reachable,
+                "credential_configured": h.credential_configured,
+                "api_ready": h.api_ready,
                 "latency_ms":   round(h.latency_ms, 1),
                 "last_checked": h.last_checked,
                 "error":        h.error,

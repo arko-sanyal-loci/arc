@@ -5,6 +5,9 @@
 
 # Runtime / generated
 data/*.db
+data/*.sqlite3
+data/*.sqlite3-wal
+data/*.sqlite3-shm
 data/*.db-wal
 data/*.db-shm
 data/*.json

@@ -1,0 +1,272 @@
+{
+  "captured_utc": "2026-11-20T04:59:32.146857+00:00",
+  "os": "Ubuntu 26.04.1 LTS",
+  "kernel": "7.0.0-43-generic",
+  "python": "3.14.4",
+  "logical_cpus": 14,
+  "ollama_version_command": "unavailable: FileNotFoundError",
+  "ollama_server_versions": {
+    "arc_b70_vulkan": {
+      "version": "0.40.16"
+    },
+    "rtx_5060ti_cuda": {
+      "version": "0.40.16"
+    }
+  },
+  "nvidia": "NVIDIA GeForce RTX 5060 Ti, 16311 MiB, 595.99.02",
+  "intel_pci_ids": "/sys/class/drm/card0/device 0x8086 0xe223 \n/sys/class/drm/card1/device 0x8086 0x7d67",
+  "arc_gl_renderer": "Mesa Intel(R) Graphics (BMG G31), Mesa 26.2.6 - kisak-mesa PPA",
+  "rtx_gl_renderer": "NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2, GL 3.3 NVIDIA 595.99.02",
+  "ollama_endpoints": {
+    "arc_b70_vulkan": "http://127.0.0.1:8000",
+    "rtx_5060ti_cuda": "http://127.0.0.1:11435"
+  },
+  "model_tags": {
+    "arc_b70_vulkan": [
+      {
+        "name": "gemma4:26b-a4b-it-q4_K_M",
+        "size": 17987581215,
+        "digest": "5571076f3d70050487b26b341705799e0ab29b808164f90d20d4cf84f699d251",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "gemma4",
+          "families": [
+            "gemma4"
+          ],
+          "parameter_size": "25.8B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2816,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "qwen3.6:27b-q4_K_M",
+        "size": 17420432475,
+        "digest": "3a40c32f1450b8380412898385b0e00df5d6d2d801dd192ca1acb7e735cd050e",
+        "details": {
+          "parent_model": "qwen3.6-source:27b-q4_K_M-20260824",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "27.8B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 5120,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "qwen3.5:4b-q4_K_M",
+        "size": 3324173934,
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "nomic-embed-text:latest",
+        "size": 274302450,
+        "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "nomic-bert",
+          "families": [
+            "nomic-bert"
+          ],
+          "parameter_size": "137M",
+          "quantization_level": "F16",
+          "context_length": 2048,
+          "embedding_length": 768,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "embedding"
+        ]
+      },
+      {
+        "name": "qwen3-vl:8b-instruct",
+        "size": 6190971795,
+        "digest": "70e58e37beb15464e19aa903dedb2cba828b89c0fb186f75ff2738c7347b96eb",
+        "details": {
+          "parent_model": "dhiltgen/qwen3-vl:8b-instruct-q4_K_M-llamacpp",
+          "format": "gguf",
+          "family": "qwen3vl",
+          "families": [
+            "qwen3vl",
+            "clip"
+          ],
+          "parameter_size": "8.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 4096,
+          "runner": "llamacpp"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools"
+        ]
+      }
+    ],
+    "rtx_5060ti_cuda": [
+      {
+        "name": "gemma4:26b-a4b-it-q4_K_M",
+        "size": 17987581215,
+        "digest": "5571076f3d70050487b26b341705799e0ab29b808164f90d20d4cf84f699d251",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "gemma4",
+          "families": [
+            "gemma4"
+          ],
+          "parameter_size": "25.8B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2816,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "qwen3.6:27b-q4_K_M",
+        "size": 17420432475,
+        "digest": "3a40c32f1450b8380412898385b0e00df5d6d2d801dd192ca1acb7e735cd050e",
+        "details": {
+          "parent_model": "qwen3.6-source:27b-q4_K_M-20260824",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "27.8B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 5120,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "qwen3.5:4b-q4_K_M",
+        "size": 3324173934,
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "model.gguf",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 2560,
+          "runner": "llamacpp"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools",
+          "thinking"
+        ]
+      },
+      {
+        "name": "nomic-embed-text:latest",
+        "size": 274302450,
+        "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "nomic-bert",
+          "families": [
+            "nomic-bert"
+          ],
+          "parameter_size": "137M",
+          "quantization_level": "F16",
+          "context_length": 2048,
+          "embedding_length": 768,
+          "runner": "ggml"
+        },
+        "capabilities": [
+          "embedding"
+        ]
+      },
+      {
+        "name": "qwen3-vl:8b-instruct",
+        "size": 6190971795,
+        "digest": "70e58e37beb15464e19aa903dedb2cba828b89c0fb186f75ff2738c7347b96eb",
+        "details": {
+          "parent_model": "dhiltgen/qwen3-vl:8b-instruct-q4_K_M-llamacpp",
+          "format": "gguf",
+          "family": "qwen3vl",
+          "families": [
+            "qwen3vl",
+            "clip"
+          ],
+          "parameter_size": "8.2B",
+          "quantization_level": "Q4_K_M",
+          "context_length": 262144,
+          "embedding_length": 4096,
+          "runner": "llamacpp"
+        },
+        "capabilities": [
+          "completion",
+          "vision",
+          "tools"
+        ]
+      }
+    ]
+  },
+  "context_setting": "4096 for model\u00d7GPU suite; 8192 for long-context suite",
+  "reasoning_mode": false,
+  "temperature": 0,
+  "source_revisions": {
+    "mr_calendar_context_compaction_compressor": "bbd50360a868ea4e97e8888d4cf46786b6652620",
+    "vision_hearing_git": "e66a2ef"
+  },
+  "notes": "Arc GPU utilization PMU blocked by CAP_PERFMON in this session. No host name, credentials, or personal content captured."
+}

@@ -8,6 +8,7 @@
 | File | Purpose | Key symbols |
 |---|---|---|
 | `app/server.py` | FastAPI server, WebSocket, MCP endpoint, lifespan wiring | `lifespan()`, `ChatRequest`, `IngestRequest`, `mcp_endpoint()` |
+| `AGENT-FEEDBACK-AND-STREAMS.md` | Agent feedback inbox, Nomic semantic stream index, VPS boundaries, TRS/A/V status | `/api/feedback`, `/api/streams/index`, `/api/streams/search` |
 | `core/heartbeat.py` | 140ms tick engine, /dev/shm ring, worker health tracking | `HeartbeatEngine`, `SHMRing`, `WorkerState`, `WorkerStatus` |
 | `core/tiered_memory.py` | 3-tier VRAM/DDR5/NVMe placement ledger | `TieredMemoryManager`, `plan_migrations()`, `heat_to_tier()`, `MigrationPlan`, `NodePlacement`, `TierCapacity`, `TierStats` |
 | `core/engine_sync.py` | Loci ↔ SQLite ↔ /dev/shm sync on every Nth heartbeat tick | `EngineSync`, `EngineState`, `_ensure_tables()`, `_count_rows()` |
@@ -43,6 +44,12 @@
 | `GET` | `/api/memory/search` | `memory_search()` | Loci node search; params: `q`, `limit` |
 | `POST` | `/api/memory/ingest` | `memory_ingest()` | Ingest document into Loci; body: `IngestRequest` |
 | `POST` | `/mcp` | `mcp_endpoint()` | MCP JSON-RPC dispatch |
+
+`/api/health` reports both endpoint reachability and `api_ready`. The external
+Nexos and xAI providers are ready only when a credential is configured and the
+provider accepts the model-list request; a reachable endpoint without a key is
+not reported as usable inference. The chat UI uses `api_ready` for provider
+status dots.
 
 ### Request / Response shapes
 
@@ -91,7 +98,11 @@ All dispatched through `POST /mcp` with `{"method": "tools/call", "params": {"na
 | `ARC_PORT` | `7860` | Port uvicorn binds on |
 | `ARC_DB_PATH` | `data/arc.db` | SQLite database path |
 
-Keys are loaded from `.env` by `start.sh` before the server starts, and read by `APIKeys.from_env()` at provisioner init.
+The CLI launcher loads keys from the untracked `.env`. The persistent
+workstation service reads `~/.config/loci/arc-provider-keys.env` (mode `0600`);
+`APIKeys.from_config()` gives environment keys precedence over the tracked YAML
+defaults. Keep real provider credentials out of Git and restart
+`arc-interface.service` after rotating or adding a key.
 
 ---
 
@@ -171,3 +182,7 @@ SQLite at `data/arc.db` with WAL journal mode.
 
 Floor: `ALPHA = 0.0500` (Constant of Hope — heat never reaches 0).  
 Ceiling: `H_MAX = 0.9999` (sovereignty exception — `pinned=True` nodes are never migrated).
+# Operations
+
+- [Dispatch](DISPATCH.md) — design for an always-available maintenance and
+  incident journal shared through a VPS UI, Arc, and connected IDE agents.

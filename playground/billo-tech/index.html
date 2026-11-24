@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101712">
+  <meta name="description" content="Billo Tech explores memory, provenance and adaptive inference through the LOCI, ARC and Glassbox research workspace.">
+  <title>Billo Tech — Build with context. Keep the evidence.</title>
+  <link rel="stylesheet" href="site.css">
+<style>.papers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}.paper,.repo-tree details{border:1px solid #35524b;border-radius:12px;padding:20px;background:#10221f;color:#eaf6ef}.paper summary{cursor:pointer;display:grid;gap:10px}.paper summary span{color:#c1f59c;font-size:.8rem;letter-spacing:.1em}.paper summary strong{font-size:1.15rem;line-height:1.3}.paper summary small,.repo-list small{font-size:.9rem;color:#afc4bc}.repo-tree{display:grid;gap:12px}.repo-tree summary{cursor:pointer;font-weight:700}.repo-tree li{margin:.5rem 0}.repo-list{list-style:none;padding:0}.repo-list li{display:flex;gap:12px;align-items:start}.repo-list li>span{width:1.5rem;color:#c1f59c}.repo-list small{display:block}.papers a,.repo-tree a{color:#c1f59c}</style></head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#top" aria-label="Billo Tech home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>Billo <b>Tech</b></span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#work">Research</a>
+      <a href="#evidence">Evidence</a><a href="#publications">Papers</a><a href="#repositories">GitHub map</a>
+      <a class="nav-cta" href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer">Explore the work <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero wrap" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> INDEPENDENT SYSTEMS RESEARCH · ATLAS BD</p>
+        <h1>Build with context.<br><em>Keep the evidence.</em></h1>
+        <p class="hero-lede">Billo Tech explores how an AI system can remember what matters, route work to the right model, and show the sources behind its answer.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#work">Explore the work <span aria-hidden="true">↓</span></a>
+          <a class="button button-quiet" href="/arko/chat">Open Arc continuity chat <span aria-hidden="true">↗</span></a>
+          <a class="button button-quiet" href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer">Open GitHub <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="hero-footnote">A research workspace by Arko Sanyal. Prototypes are labelled as prototypes; results are published with their limits.</p>
+      </div>
+      <div class="hero-art" aria-label="Diagram of a memory-to-evidence loop">
+        <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+        <div class="orbit-node node-a">MEMORY<span>LOCI</span></div>
+        <div class="orbit-node node-b">ROUTING<span>ARC</span></div>
+        <div class="orbit-node node-c">EVIDENCE<span>GLASSBOX</span></div>
+        <div class="orbit-core"><span class="core-spark">✳</span><strong>context</strong><small>→ answer → check</small></div>
+        <div class="art-label label-top">RETRIEVE</div><div class="art-label label-bottom">REVIEW</div>
+      </div>
+    </section>
+
+    <section class="strip wrap" aria-label="Research principles">
+      <span>01 <b>Find the source</b></span><span>02 <b>Route the work</b></span><span>03 <b>Keep a trace</b></span>
+    </section>
+
+    <section class="section wrap" id="work">
+      <div class="section-heading">
+        <p class="eyebrow">THE WORKSPACE</p>
+        <h2>One loop, four experiments.</h2>
+        <p>Each part asks a specific question. The aim is to make the whole system easier to inspect and improve.</p>
+      </div>
+      <div class="project-grid">
+        <article class="project-card card-loci">
+          <div class="card-top"><span class="project-index">01</span><span class="project-state">LOCAL PROTOTYPE</span></div>
+          <div class="glyph glyph-loci" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <h3>LOCI</h3><p class="card-subtitle">Contextual memory</p>
+          <p>Organises source-linked information by relevance and recency, so an answer can return to the evidence it came from.</p>
+          <a href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer" aria-label="Explore LOCI on GitHub">Explore research <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="project-card card-arc">
+          <div class="card-top"><span class="project-index">02</span><span class="project-state">LOCAL PROTOTYPE</span></div>
+          <div class="glyph glyph-arc" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h3>ARC</h3><p class="card-subtitle">Adaptive runtime</p>
+          <p>Tests complexity-aware model routing across a local NVIDIA RTX lane and an Intel Arc lane, with fallback and load reporting.</p>
+          <a href="https://github.com/arko-sanyal-loci/arc" target="_blank" rel="noopener noreferrer" aria-label="Explore ARC on GitHub">Explore runtime <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="project-card card-glass">
+          <div class="card-top"><span class="project-index">03</span><span class="project-state">DESIGN + CODE</span></div>
+          <div class="glyph glyph-glass" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h3>Glassbox</h3><p class="card-subtitle">Provenance and review</p>
+          <p>Develops an inspectable record for source references, revisions and decisions. Deployed ledger status is not claimed here.</p>
+          <a href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer" aria-label="Explore Glassbox research">Explore the design <span aria-hidden="true">↗</span></a>
+        </article>
+        <article class="project-card card-symp">
+          <div class="card-top"><span class="project-index">04</span><span class="project-state">PLAYGROUND</span></div>
+          <div class="glyph glyph-symp" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+          <h3>SympRev</h3><p class="card-subtitle">Audio and video signals</p>
+          <p>Experiments with compact descriptions of motion, colour, rhythm and sound. Semantic and emotional readings remain hypotheses.</p>
+          <a href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer" aria-label="Explore SympRev research">Explore experiments <span aria-hidden="true">↗</span></a>
+        </article>
+      </div>
+    </section>
+
+    <div class="wrap"><section class="section" id="publications"><p class="eyebrow">Publication library · 8 disclosures + 1 research package</p><h2>Ideas, with their sources.</h2><p>Open a preview to explore the topic and follow its original record. Publication claims and implementation status are distinct; consult each source for methodology and limitations.</p><div class="papers"><details class="paper"><summary><span>TD COMMONS · 11089</span><strong>Forecasting affective state</strong><small>Arko Sanyal</small></summary><p>Research proposal for forecasting affective trajectories from interaction streams.</p><a href="https://www.tdcommons.org/dpubs_series/11089/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 11090</span><strong>Reflection-on-Action</strong><small>Arko Sanyal</small></summary><p>Explores learning from behavioral outcomes and the limits of interpretation.</p><a href="https://www.tdcommons.org/dpubs_series/11090/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 11091</span><strong>A separate memory spectrum for thoughts</strong><small>Arko Sanyal</small></summary><p>Examines short-lived reasoning traces and outcome-gated retention.</p><a href="https://www.tdcommons.org/dpubs_series/11091/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 10856</span><strong>Category-Adaptive Recall Depth (CARD)</strong><small>Arko Sanyal</small></summary><p>Describes category-dependent retrieval depth and a reported evaluation.</p><a href="https://www.tdcommons.org/dpubs_series/10856/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 11666</span><strong>LOCI: heat-decaying, goal-conditioned memory</strong><small>Arko Sanyal and Independent Research</small></summary><p>A disclosure on long-horizon memory, retrieval and loop prevention.</p><a href="https://www.tdcommons.org/dpubs_series/11666/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 11092</span><strong>Focused Retention</strong><small>Arko Sanyal</small></summary><p>Proposes goal-conditioned retention and release of memory traces.</p><a href="https://www.tdcommons.org/dpubs_series/11092/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 10806</span><strong>LOCI ∞ memory middleware</strong><small>Arko Sanyal</small></summary><p>Describes cross-platform context and hardware-tiered memory.</p><a href="https://www.tdcommons.org/dpubs_series/10806/">Read publication</a></details><details class="paper"><summary><span>TD COMMONS · 10843</span><strong>LOCI Persistent AI Memory Engine</strong><small>Arko Sanyal and Roza</small></summary><p>Describes versioned facts, provenance, and memory retrieval.</p><a href="https://www.tdcommons.org/dpubs_series/10843/">Read publication</a></details><details class="paper"><summary><span>ZENODO · DOI</span><strong>Thermal Reasoning Substrate &amp; LOCI Architecture</strong><small>Arko Sanyal and collaborators</small></summary><p>The local research package records this DOI for its reproducibility materials. Zenodo metadata could not be independently checked in this session.</p><a href="https://doi.org/10.5281/zenodo.21188425">Open recorded DOI</a></details></div></section><section class="section" id="repositories"><p class="eyebrow">GitHub map</p><h2>Follow the work across accounts.</h2><p>Public repositories are grouped by account. Private work is accessible only to authorized collaborators.</p><div class="repo-tree"><details open><summary><a href="https://github.com/arko-sanyal-loci">arko-sanyal-loci</a> · organization</summary><ul class="repo-list"><li><span aria-hidden="true">🧠</span><div><a href="https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE">LOCI Memory Engine</a><small>Canonical memory engine: storage, retrieval, provenance, Glassbox, sync and research.</small></div></li><li><span aria-hidden="true">◉</span><div><a href="https://github.com/arko-sanyal-loci/arc">Arc</a><small>Runtime, interface, routing and continuity tools.</small></div></li><li><span aria-hidden="true">▣</span><div><a href="https://github.com/arko-sanyal-loci/loci-evidence-system">Evidence system</a><small>Consent-aware intake, records and evidence references.</small></div></li><li><span aria-hidden="true">⇄</span><div><a href="https://github.com/arko-sanyal-loci/loci-coordination-bus">Coordination bus</a><small>Experiments in inter-agent messaging and coordination.</small></div></li><li><span aria-hidden="true">◇</span><div><a href="https://github.com/arko-sanyal-loci/LOCI-Card">LOCI Card</a><small>Category-adaptive recall research and implementation.</small></div></li><li><span aria-hidden="true">▤</span><div><a href="https://github.com/arko-sanyal-loci/docs">Documentation</a><small>Guides and supporting documentation.</small></div></li><li><span aria-hidden="true">⇄</span><div><a href="https://github.com/arko-sanyal-loci/LOCI-Coordinate-BUS">LOCI Coordinate BUS</a><small>Coordination bus repository and related work.</small></div></li><li><span aria-hidden="true">▧</span><div><a href="https://github.com/arko-sanyal-loci/LOCI-CARD-PAPER">LOCI CARD PAPER</a><small>Paper repository; consult its current repository status.</small></div></li><li><span aria-hidden="true">▧</span><div><a href="https://github.com/arko-sanyal-loci/loci-card-papers">LOCI Card papers</a><small>Related paper materials and history.</small></div></li><li><span aria-hidden="true">◈</span><div><a href="https://github.com/arko-sanyal-loci/loci-memory-engine-1">LOCI memory engine 1</a><small>Related memory engine repository.</small></div></li><li><span aria-hidden="true">▦</span><div><a href="https://github.com/arko-sanyal-loci?tab=repositories">All organization repositories</a><small>Browse the complete public repository list.</small></div></li></ul></details><details><summary><a href="https://github.com/arko-sanyal">arko-sanyal</a> · personal account</summary><ul><li><a href="https://github.com/arko-sanyal/loci-memory-engine">LOCI memory engine</a></li><li><a href="https://github.com/arko-sanyal/loci-coordination-bus">Coordination bus</a></li><li><a href="https://github.com/arko-sanyal/loci-card-papers">LOCI Card papers</a></li></ul></details><details><summary><a href="https://github.com/arkosanyal">arkosanyal</a> · personal account</summary><ul><li><a href="https://github.com/arkosanyal/loci-engine">LOCI engine</a></li></ul></details><details><summary><a href="https://github.com/arko-sanyal2">arko-sanyal2</a> · personal account</summary><p>No public repositories were listed when checked. Visit the profile for its current state.</p></details></div></section></div>
+    <section class="evidence-band" id="evidence">
+      <div class="wrap evidence-layout">
+        <div>
+          <p class="eyebrow">A SMALL LOCAL CHECK · 20 NOV 2026</p>
+          <h2>Show the miss,<br>alongside the hit.</h2>
+          <p class="evidence-copy">A six-query retrieval smoke sample returned the intended category in the top three for all six queries, and in the top position for five. One media query ranked the wrong category first.</p>
+          <p class="evidence-caution">This is a tiny workstation check, not an independent benchmark or a general performance claim.</p>
+        </div>
+        <div class="score-card" aria-label="Retrieval sample results">
+          <div class="score-row"><span>Top 3 retrieval</span><strong>6 / 6</strong><div class="meter"><i style="width:100%"></i></div></div>
+          <div class="score-row"><span>Top 1 category</span><strong>5 / 6</strong><div class="meter meter-warm"><i style="width:83.3%"></i></div></div>
+          <div class="score-note"><span class="note-icon">↗</span><p><b>Known miss</b><br>Firefox decoding query ranked Mr Calendar first; Media was second.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap closing">
+      <p class="eyebrow">ATLAS BD · WORKING PROGRAMME</p>
+      <h2>Research should remain<br><em>open to correction.</em></h2>
+      <p>LOCI, ARC, Glassbox and SympRev are developed in a shared experimental workspace. Their status, evidence and limits are kept separate from the ideas still being tested.</p>
+      <a class="button button-primary" href="https://github.com/arko-sanyal-loci" target="_blank" rel="noopener noreferrer">Browse public repositories <span aria-hidden="true">↗</span></a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner"><a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>Billo <b>Tech</b></span></a><p>Research by Arko Sanyal · Atlas BD is a working programme label.</p><p class="footer-legal">Billo Tech is presented here as a working brand for an independent research initiative. This page does not assert that a company has been incorporated or that any prototype is a production service.</p><div class="footer-links"><a href="/arko/chat">Protected Arc continuity chat</a><a href="/status">Service status</a></div></div>
+  </footer>
+</body>
+</html>
