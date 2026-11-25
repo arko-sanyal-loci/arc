@@ -18,7 +18,7 @@ It runs your model locally with persistent memory, dynamic GPU offloading, and a
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue?style=flat-square)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Billo Tech](https://img.shields.io/badge/Billo%20Tech-arc-6c6cff?style=flat-square)](https://billo.tech)
 
 </div>
@@ -234,4 +234,10 @@ Loci Memory Engine   ←── Arc Runtime  ←── Chat UI  │
 
 ## License
 
-MIT © [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci)
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)** — see [`LICENSE`](LICENSE).
+
+Commercial use — including use in a closed-source product or service, or use in a paid offering
+without releasing source code under AGPL-3.0 — requires a written commercial license from
+**Billo Tech**. See [`COMMERCIAL.md`](COMMERCIAL.md) for details.
+
+© [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci)
