@@ -12,9 +12,16 @@ Environment=PYTHONUNBUFFERED=1
 Environment=LOCI_LOCAL_BASE_URL=http://127.0.0.1:11437/v1
 Environment=LOCI_LOCAL_MODEL=arc-local
 Environment=LOCI_LOCAL_HEALTH_URL=http://127.0.0.1:11437/health
+Environment=LOCI_LOCAL_INTEL_BASE_URL=http://127.0.0.1:8000/v1
+Environment=LOCI_LOCAL_INTEL_MODEL=qwen3.6:27b-q4_K_M
 Environment=ARC_NOMIC_EMBED_BASE_URL=http://127.0.0.1:11435
 Environment=ARC_NOMIC_FALLBACK_URL=http://127.0.0.1:11438
 Environment=ARC_MUSIC_MONITOR_URL=http://127.0.0.1:11500
+Environment=ARC_STATE_DIR=/data/x-cargo/arc-runtime
+Environment=ARC_DATA_DIR=/data/x-cargo/arc-runtime/data
+Environment=LOCI_DB_PATH=/data/x-cargo/loci/context2.db
+Environment=LOCI_GLASSBOX_PATH=/data/x-cargo/loci/glassbox_ledger.jsonl
+Environment=ARC_STREAMS_DB=/data/x-cargo/loci/semantic_streams.sqlite3
 ExecStart=%h/src/arko-sanyal-loci/arc-canonical/.venv/bin/uvicorn server:app --app-dir app --host 127.0.0.1 --port 7860 --no-access-log
 Restart=on-failure
 RestartSec=3
@@ -23,7 +30,7 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=%h/src/arko-sanyal-loci/arc-canonical/data
+ReadWritePaths=%h/src/arko-sanyal-loci/arc-canonical/data /data/x-cargo
 RestrictSUIDSGID=yes
 LockPersonality=yes
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK

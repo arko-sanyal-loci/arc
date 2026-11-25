@@ -50,6 +50,16 @@ only to `127.0.0.1:11434`. The Arc service exports
 `ARC_NOMIC_EMBED_BASE_URL` and `ARC_NOMIC_FALLBACK_URL`. The VPS itself is not
 exposed publicly.
 
+The production workstation unit sets `ARC_STREAMS_DB` to
+`/data/x-cargo/loci/semantic_streams.sqlite3`. This places the append-only
+stream journal beside the LOCI context and Glassbox stores, where the hourly
+`arc-memory-sync` service takes a SQLite-consistent snapshot and encrypts it
+for the private GitHub memory repository and VPS. The database under the code
+checkout is a development default only; do not rely on it for production
+continuity. When changing this path, migrate existing versions with SQLite's
+backup API before restarting Arc, then confirm the resulting snapshot contains
+the stream database.
+
 The VPS has CPU-only inference (two vCPU and 7.7 GiB RAM); it hosts a compact
 embedding endpoint but does not provide GPU token offload. The workstation
 uses its GPU-resident local Nomic model for embedding and Qwen-VL for local
@@ -71,7 +81,9 @@ The semantic journal is included in the existing private memory sync as a
 SQLite-consistent snapshot, encrypted with age before it is versioned in the
 private `arc-private-memory` repository. The source system is not yet subscribed
 to the coordination bus: agents explicitly call `arc_stream_index` for a
-consented transcript/metadata segment or task delta. See the [Director delta,
+consented transcript/metadata segment or task delta. HTTP requests to the local
+API must include the browser's `Origin` header or an authorized local-tooling
+token; do not weaken this guard to make command-line calls easier. See the [Director delta,
 heartbeat, and clock-safety design](https://github.com/arko-sanyal-loci/LOCI-MEMORY-ENGINE/blob/main/docs/DIRECTOR-DELTA-AND-TIME.md).
 
 The local A/V path is wired to this versioned vector index through a
@@ -85,7 +97,8 @@ documented feature.
 
 Verify the agent feedback panel and semantic search from the workstation UI.
 To index a stream from an agent, POST JSON to `/api/streams/index`; to retrieve,
-GET `/api/streams/search?q=...`. Verify the VPS model with
+GET `/api/streams/search?q=...` with the Origin header or authorized
+local-tooling token. Verify the VPS model with
 `curl http://127.0.0.1:11434/api/embed` from a VPS shell or with
 `curl http://127.0.0.1:11435/api/embed` on the workstation, or use
 `http://127.0.0.1:11438/api/embed` as the secured VPS fallback. Both endpoints
