@@ -35,7 +35,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 
@@ -48,6 +47,7 @@ from core.api_provision  import APIProvisioner, CompletionRequest, ChatMessage, 
 from core.tiered_memory  import TieredMemoryManager, plan_migrations
 from core.loci_memory    import LociMemoryBridge
 from core.platform_paths import default_shm_path, ensure_runtime_dirs
+from core.http_guard import LocalOriginGuard
 from core.scratchpad import scratch
 from core.workspace import WorkspaceError, list_files, read_file, run_check, write_file
 
@@ -209,12 +209,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# One trust seam for /mcp, /api/*, /v1/* and /ws/*: loopback Host, Arc's own
+# Origin, or the local tooling token. No CORS headers are emitted.
+app.add_middleware(LocalOriginGuard)
 
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
