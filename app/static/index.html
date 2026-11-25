@@ -352,6 +352,10 @@
           <h3><svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="m16 10 5-3v10l-5-3" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>Live audio + video analysis</h3>
           <p>Choose the Havit microphone and camera in the panel, then press Start. Audio is transcribed locally and video motion/detail runs through the workstation GPU. On Stop, Arc appends transcripts and time/frame references to its versioned journal; raw audio and video are not retained.</p>
           <p class="privacy-note">Capture remains off until you press Start and grant browser permission. Start only when everyone who may be captured has agreed. If the embedded panel is unavailable, <a href="http://127.0.0.1:11500/capture" target="_blank" rel="noreferrer">open the local A/V panel</a>.</p>
+          <div class="av-actions">
+            <button type="button" id="listen-arc">Listen + recall (5 seconds)</button>
+            <span id="listen-state" class="small" role="status">Capture is off.</span>
+          </div>
           <iframe src="http://127.0.0.1:11500/capture" title="Arc local audio and video analysis" allow="camera; microphone" referrerpolicy="no-referrer" style="display:block;width:100%;height:760px;border:1px solid var(--line);border-radius:12px;background:#101614"></iframe>
         </section>
         <section class="work-card" aria-label="Projects and GPU work">
@@ -404,10 +408,13 @@
         <span class="hint-chip" onclick="cycleProvider()">Switch provider</span>
         <span class="hint-chip" onclick="toggleFeedback()">Agent feedback</span>
         <span class="hint-chip" onclick="toggleStreams()">Semantic streams</span>
+        <button type="button" class="hint-chip" id="thought-mode-toggle" onclick="toggleThoughtMode()">Collect thought</button>
+        <span id="thought-state" class="small" role="status">Arc evaluates only after you send.</span>
       </div>
       <div id="input-box">
         <textarea id="message-input" rows="1" placeholder="Message Arc…"
           onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button id="review-thought-btn" onclick="reviewThought()" title="Review collected thought" disabled>Review</button>
         <button id="send-btn" onclick="sendMessage()" title="Send">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M14 2L2 7l5 2 2 5 5-12z" fill="currentColor"/>
@@ -672,14 +679,18 @@ async function stopLocalAv(showMessage = true) {
   document.getElementById('av-mic-source').disabled = true;
   if (showMessage) document.getElementById('av-state').textContent = 'Stopped · tracks released.';
 }
-document.getElementById('av-start').addEventListener('click', startLocalAv);
-document.getElementById('av-stop').addEventListener('click', () => stopLocalAv());
-for (const id of ['av-camera-source', 'av-mic-source']) {
-  document.getElementById(id).addEventListener('change', async () => {
-    if (!avStream) return;
-    await stopLocalAv(false);
-    await startLocalAv();
-  });
+const legacyAvStart = document.getElementById('av-start');
+const legacyAvStop = document.getElementById('av-stop');
+if (legacyAvStart && legacyAvStop) {
+  legacyAvStart.addEventListener('click', startLocalAv);
+  legacyAvStop.addEventListener('click', () => stopLocalAv());
+  for (const id of ['av-camera-source', 'av-mic-source']) {
+    document.getElementById(id)?.addEventListener('change', async () => {
+      if (!avStream) return;
+      await stopLocalAv(false);
+      await startLocalAv();
+    });
+  }
 }
 navigator.mediaDevices?.addEventListener?.('devicechange', async () => {
   const captureLost = avStream?.getTracks().some(track => track.readyState === 'ended');
@@ -688,6 +699,32 @@ navigator.mediaDevices?.addEventListener?.('devicechange', async () => {
     document.getElementById('av-state').textContent = 'A camera or microphone disconnected · reconnect it, then press Allow again.';
   }
   try { await refreshAvDevices(); } catch (_) {}
+});
+
+document.getElementById('listen-arc')?.addEventListener('click', async () => {
+  const button = document.getElementById('listen-arc');
+  const state = document.getElementById('listen-state');
+  button.disabled = true;
+  state.textContent = 'Listening locally for 5 seconds…';
+  try {
+    const response = await fetch('/api/audio/listen', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({duration_seconds: 5, consent_scope: 'explicit_opt_in'}),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+    const transcript = data.transcript || '';
+    document.getElementById('message-input').value = transcript;
+    autoResize(document.getElementById('message-input'));
+    state.textContent = transcript
+      ? `Heard: ${transcript} · ${data.recall?.selected_items?.length || 0} LOCI memories recalled.`
+      : 'No speech detected; raw audio was discarded.';
+  } catch (error) {
+    state.textContent = `Listen failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 });
 
 // ── WebSocket ──────────────────────────────────────────────────────────────
@@ -703,6 +740,30 @@ connectWS();
 // ── Send ───────────────────────────────────────────────────────────────────
 let streamBuffer = '';
 let streamEl = null;
+let thoughtMode = false;
+let thoughtDraft = [];
+
+function toggleThoughtMode() {
+  thoughtMode = !thoughtMode;
+  const toggle = document.getElementById('thought-mode-toggle');
+  const review = document.getElementById('review-thought-btn');
+  toggle.textContent = thoughtMode ? 'Collecting…' : 'Collect thought';
+  toggle.setAttribute('aria-pressed', String(thoughtMode));
+  review.disabled = thoughtDraft.length === 0;
+  document.getElementById('message-input').placeholder = thoughtMode
+    ? 'Keep writing; Arc will wait for Review…'
+    : 'Message Arc…';
+}
+
+function reviewThought() {
+  if (!thoughtDraft.length || isStreaming) return;
+  const input = document.getElementById('message-input');
+  input.value = thoughtDraft.join('\n\n');
+  thoughtDraft = [];
+  toggleThoughtMode();
+  autoResize(input);
+  sendMessage();
+}
 
 function handleWSMessage(event) {
   const data = JSON.parse(event.data);
@@ -734,6 +795,16 @@ function sendMessage() {
   const input = document.getElementById('message-input');
   const text = input.value.trim();
   if (!text || isStreaming) return;
+
+  if (thoughtMode) {
+    thoughtDraft.push(text);
+    input.value = '';
+    autoResize(input);
+    document.getElementById('review-thought-btn').disabled = false;
+    document.getElementById('thought-state').textContent =
+      `${thoughtDraft.length} draft section(s) collected; Arc is not evaluating them yet.`;
+    return;
+  }
 
   hideEmpty();
   addBubble('user', text);
@@ -892,7 +963,7 @@ function scrollToBottom() {
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey && !thoughtMode) { e.preventDefault(); sendMessage(); }
 }
 
 function autoResize(el) {

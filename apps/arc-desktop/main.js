@@ -67,6 +67,12 @@ function normalizeBrowserUrl(value) {
   return `https://www.google.com/search?q=${encodeURIComponent(trimmed)}`;
 }
 
+function allowLocalMediaPermission(webContents, permission) {
+  const url = webContents?.getURL?.() || "";
+  return (permission === "media" || permission === "camera" || permission === "microphone")
+    && url.startsWith(mediaUrl);
+}
+
 function loadBrowserUrl(value) {
   const url = normalizeBrowserUrl(value);
   if (!browserView || isBlockedBrowserUrl(url)) {
@@ -272,8 +278,8 @@ function createBrowserWindow() {
       updateBrowserToolbar({ blocked: true, url });
     }
   });
-  browserSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
-    callback(false);
+  browserSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(allowLocalMediaPermission(webContents, permission));
   });
 
   browserWindow.loadFile(path.join(__dirname, "browser.html"));
@@ -359,6 +365,9 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   startBrowserControlServer();
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(allowLocalMediaPermission(webContents, permission));
+  });
   session.defaultSession.webRequest.onBeforeRequest(
     { urls: ["*://*/*"] },
     (details, callback) => {

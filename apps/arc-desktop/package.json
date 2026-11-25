@@ -29,14 +29,18 @@
       "main.js",
       "preload.js",
       "browser.html",
-      "browser-preload.js"
+      "browser-preload.js",
+      "build/icon.png"
     ],
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
-      "category": "Utility"
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "executableName": "arc",
+      "syncDesktopName": true
     },
     "mac": {
       "category": "public.app-category.developer-tools"
