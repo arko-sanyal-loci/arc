@@ -1005,48 +1005,49 @@ function saveToHistory() {
 }
 
 // ── Status polling ─────────────────────────────────────────────────────────
-function pollStatus() {
-  fetch('/api/status')
-    .then(r => r.json())
-    .then(data => {
-      // Heartbeat
-      const tick = data.heartbeat?.tick_id ?? 0;
-      document.getElementById('hb-tick').textContent = tick ? `#${tick}` : '—';
-      const hbDot = document.getElementById('hb-dot');
-      hbDot.className = `dot ${data.heartbeat?.tick_id ? 'green' : 'red'}`;
-
-      // GPU
-      const rtxPct = data.gpu?.rtx?.util_pct ?? 0;
-      const arcPct = data.gpu?.arc?.util_pct ?? 0;
-      document.getElementById('rtx-bar').style.width = rtxPct + '%';
-      document.getElementById('arc-bar').style.width = arcPct + '%';
-      document.getElementById('rtx-pct').textContent = rtxPct + '%';
-      document.getElementById('arc-pct').textContent = arcPct + '%';
-      document.getElementById('agent-rtx').textContent = rtxPct > 0 ? 'active' : 'standby';
-      document.getElementById('agent-arc').textContent = arcPct > 0 ? 'active' : 'standby';
-    })
-    .catch(() => {});
-
-  fetch('/api/health')
-    .then(r => r.json())
-    .then(data => {
-      const dot = (name, id) => {
-        const h = data[name] || {};
-        const ready = h.api_ready;
-        const el = document.getElementById(id);
-        el.className = `dot ${ready ? 'green' : 'red'}`;
-        el.title = ready ? `${name}: API ready` : `${name}: ${h.error || 'not ready'}`;
-        el.setAttribute('aria-label', el.title);
-      };
-      dot('LOCAL', 'local-dot');
-      dot('NEXOS', 'nexos-dot');
-      dot('XAI',   'xai-dot');
-    })
-    .catch(() => {});
+let statusFailures = 0;
+let statusTimer = 0;
+async function pollStatus() {
+  try {
+    const [statusResponse, healthResponse] = await Promise.all([
+      fetch('/api/status'), fetch('/api/health')
+    ]);
+    if (!statusResponse.ok || !healthResponse.ok) throw new Error('status unavailable');
+    const data = await statusResponse.json();
+    const health = await healthResponse.json();
+    statusFailures = 0;
+    const tick = data.heartbeat?.tick_id ?? 0;
+    document.getElementById('hb-tick').textContent = tick ? `#${tick}` : '—';
+    const hbDot = document.getElementById('hb-dot');
+    hbDot.className = `dot ${tick ? 'green' : 'red'}`;
+    const rtxPct = data.gpu?.rtx?.util_pct ?? 0;
+    const arcPct = data.gpu?.arc?.util_pct ?? 0;
+    document.getElementById('rtx-bar').style.width = rtxPct + '%';
+    document.getElementById('arc-bar').style.width = arcPct + '%';
+    document.getElementById('rtx-pct').textContent = rtxPct + '%';
+    document.getElementById('arc-pct').textContent = arcPct + '%';
+    document.getElementById('agent-rtx').textContent = rtxPct > 0 ? 'active' : 'standby';
+    document.getElementById('agent-arc').textContent = arcPct > 0 ? 'active' : 'standby';
+    const dot = (name, id) => {
+      const state = health[name] || {};
+      const ready = state.api_ready;
+      const el = document.getElementById(id);
+      el.className = `dot ${ready ? 'green' : 'red'}`;
+      el.title = ready ? `${name}: API ready` : `${name}: ${state.error || 'not ready'}`;
+      el.setAttribute('aria-label', el.title);
+    };
+    dot('LOCAL', 'local-dot');
+    dot('NEXOS', 'nexos-dot');
+    dot('XAI', 'xai-dot');
+  } catch (_) {
+    statusFailures = Math.min(statusFailures + 1, 4);
+  } finally {
+    const base = document.hidden ? 15000 : 3000;
+    statusTimer = setTimeout(pollStatus, Math.min(30000, base * (2 ** statusFailures)));
+  }
 }
 
 pollStatus();
-statusInterval = setInterval(pollStatus, 5000);
 </script>
 </body>
 </html>

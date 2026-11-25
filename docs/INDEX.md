@@ -9,6 +9,7 @@
 |---|---|---|
 | `app/server.py` | FastAPI server, WebSocket, MCP endpoint, lifespan wiring | `lifespan()`, `ChatRequest`, `IngestRequest`, `mcp_endpoint()` |
 | `AGENT-FEEDBACK-AND-STREAMS.md` | Agent feedback inbox, Nomic semantic stream index, VPS boundaries, TRS/A/V status | `/api/feedback`, `/api/streams/index`, `/api/streams/search` |
+| `ARC-MEDIA-RUNTIME.md` | Consent-gated YouTube/tab A/V, MusicSympRev/Nomic library, latency and startup contract | `/api/music/search`, `/api/music/recent`, `arc_music_search` |
 | `ARC-RESTORATION-GOAL.md` | Staged Claude-level restoration target, stop gates, and parallel-work rule | — |
 | `CLAUDE-PARITY-MATRIX.md` | Public capability comparison and low-tier VPS boundary | — |
 | `ARC-VISION-CODING-BLUEPRINT-v0001.md` | Dependency-aware multimodal coding runtime blueprint | — |

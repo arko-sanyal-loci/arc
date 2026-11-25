@@ -27,7 +27,7 @@ capabilities:
     text: "native"
     audio: "local-consent-gated"
     video: "local-consent-gated"
-    music: "not-yet-wired"
+    music: "local-musicsymprev+nomic-library"
   tools:
     workspace: "bounded"
     scratchpad: "local"

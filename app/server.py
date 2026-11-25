@@ -69,6 +69,7 @@ _lane_health: dict[str, dict] = {
     "rtx": {"ready": False, "models": [], "checked_at": None},
     "arc": {"ready": False, "models": [], "checked_at": None},
 }
+_MUSIC_MONITOR_URL = os.environ.get("ARC_MUSIC_MONITOR_URL", "http://127.0.0.1:11500")
 
 
 async def _lane_probe(client: httpx.AsyncClient, lane: str, base_url: str) -> tuple[str, list[str]]:
@@ -334,6 +335,42 @@ async def status():
         },
         "memory_tiers": tier_snapshot.get("tiers", {}),
     }
+
+
+async def _music_monitor_request(method: str, path: str, payload: dict | None = None):
+    """Reach the separate consent-gated monitor without exposing its database."""
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(45.0), trust_env=False) as client:
+            response = await client.request(
+                method, f"{_MUSIC_MONITOR_URL.rstrip('/')}{path}", json=payload,
+                headers={"Host": "127.0.0.1:11500"},
+            )
+        response.raise_for_status()
+        return response.json()
+    except (httpx.HTTPError, ValueError, TypeError) as exc:
+        return JSONResponse(
+            {"error": "Arc music memory is unavailable", "detail": type(exc).__name__},
+            status_code=503,
+        )
+
+
+@app.get("/api/music/recent")
+async def music_recent(limit: int = 20):
+    return await _music_monitor_request("GET", f"/api/music/recent?limit={max(1, min(limit, 100))}")
+
+
+@app.post("/api/music/search")
+async def music_search(request: Request):
+    try:
+        payload = await request.json()
+        query = str(payload.get("query") or "").strip()
+        limit = max(1, min(int(payload.get("limit", 8)), 50))
+    except (ValueError, TypeError, AttributeError):
+        return JSONResponse({"error": "valid music query required"}, status_code=422)
+    if not query or len(query) > 4000:
+        return JSONResponse({"error": "music query must be 1-4000 characters"}, status_code=422)
+    return await _music_monitor_request("POST", "/api/music/search",
+                                        {"query": query, "limit": limit})
 
 
 @app.get("/api/health")
@@ -1264,6 +1301,14 @@ MCP_TOOLS = [
         }, "required": ["query"]},
     },
     {
+        "name": "arc_music_search",
+        "description": "Search locally heard MusicSympRev gists by tempo, rhythm, timbre, arrangement, source label, or semantic association",
+        "inputSchema": {"type": "object", "properties": {
+            "query": {"type": "string", "minLength": 1, "maxLength": 4000},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 50, "default": 8},
+        }, "required": ["query"], "additionalProperties": False},
+    },
+    {
         "name":        "arc_stream_index",
         "description": "Append an explicitly consented text segment as a new semantic stream version",
         "inputSchema": {"type": "object", "properties": {
@@ -1470,6 +1515,15 @@ async def mcp_endpoint(request: Request):
         if tool == "arc_stream_search":
             r = await semantic_stream_search(request, q=args.get("query", ""), limit=args.get("limit", 10),
                                              min_similarity=args.get("min_similarity", 0.2))
+            if isinstance(r, JSONResponse):
+                r = json.loads(r.body)
+            return mcp_result({"content": [{"type": "text", "text": json.dumps(r)}]})
+
+        if tool == "arc_music_search":
+            r = await _music_monitor_request(
+                "POST", "/api/music/search",
+                {"query": args.get("query", ""), "limit": args.get("limit", 8)},
+            )
             if isinstance(r, JSONResponse):
                 r = json.loads(r.body)
             return mcp_result({"content": [{"type": "text", "text": json.dumps(r)}]})

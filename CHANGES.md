@@ -1,5 +1,18 @@
 # Arc secure tooling — change notes
 
+## 2026-11-25 — Arc media and music retrieval
+
+- Added Arc proxy endpoints and the `arc_music_search` MCP tool for the local
+  MusicSympRev/Nomic library owned by the opt-in media monitor.
+- Declared the music capability as a local MusicSympRev + Nomic library rather
+  than unwired acoustic analysis.
+- Made Arc's user service want and start after `arc-monitor.service` while
+  retaining restart-on-failure and default-target startup.
+- Replaced overlapping fixed UI polling with visibility-aware asynchronous
+  polling and bounded failure backoff.
+- Documented the YouTube shared-tab permission path, derived-journal proof,
+  latency/jitter signals, source identity boundary, and reboot limitations.
+
 ## 1. Loopback / Origin / Host guard (closes the CORS `*` hole)
 
 **The hook is one line.** In `app/server.py` the wildcard
