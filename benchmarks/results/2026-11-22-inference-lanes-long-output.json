@@ -1,0 +1,120 @@
+{
+  "schema": "loci.inference-lane-benchmark.v1",
+  "started_at": "2026-11-22T01:07:02.219867+00:00",
+  "model": "qwen3.5:4b-q4_K_M",
+  "prompt": "Write exactly 180 words explaining how an offline-first agent team can coordinate software changes using versioned events, scoped task leases, local tests, and one integration reviewer. Avoid lists.",
+  "max_tokens": 256,
+  "trial_count": 3,
+  "telemetry_note": "API timing is measured. GPU utilization is not collected by this script; intel_gpu_top requires CAP_PERFMON on this workstation.",
+  "lanes": {
+    "arc": {
+      "url": "http://127.0.0.1:8000",
+      "passed": 3,
+      "failed": 0,
+      "median_wall_ms": 2368.6,
+      "median_generation_tokens_per_second": 101.92,
+      "trials": [
+        {
+          "ok": true,
+          "wall_ms": 2380.0,
+          "prompt_tokens": 50,
+          "prompt_ms": 37.4,
+          "output_tokens": 236,
+          "output_chars": 1563,
+          "generation_ms": 2315.6,
+          "generation_tokens_per_second": 101.92,
+          "load_ms": 0.6
+        },
+        {
+          "ok": true,
+          "wall_ms": 2368.6,
+          "prompt_tokens": 50,
+          "prompt_ms": 38.8,
+          "output_tokens": 236,
+          "output_chars": 1563,
+          "generation_ms": 2326.0,
+          "generation_tokens_per_second": 101.46,
+          "load_ms": 0.4
+        },
+        {
+          "ok": true,
+          "wall_ms": 2357.2,
+          "prompt_tokens": 50,
+          "prompt_ms": 40.2,
+          "output_tokens": 236,
+          "output_chars": 1563,
+          "generation_ms": 2312.8,
+          "generation_tokens_per_second": 102.04,
+          "load_ms": 0.5
+        }
+      ]
+    },
+    "rtx": {
+      "url": "http://127.0.0.1:11435",
+      "passed": 3,
+      "failed": 0,
+      "median_wall_ms": 2145.9,
+      "median_generation_tokens_per_second": 107.26,
+      "trials": [
+        {
+          "ok": true,
+          "wall_ms": 2149.0,
+          "prompt_tokens": 50,
+          "prompt_ms": 37.5,
+          "output_tokens": 224,
+          "output_chars": 1455,
+          "generation_ms": 2087.4,
+          "generation_tokens_per_second": 107.31,
+          "load_ms": 0.4
+        },
+        {
+          "ok": true,
+          "wall_ms": 2145.9,
+          "prompt_tokens": 50,
+          "prompt_ms": 40.4,
+          "output_tokens": 224,
+          "output_chars": 1455,
+          "generation_ms": 2101.8,
+          "generation_tokens_per_second": 106.57,
+          "load_ms": 0.4
+        },
+        {
+          "ok": true,
+          "wall_ms": 2130.4,
+          "prompt_tokens": 50,
+          "prompt_ms": 38.4,
+          "output_tokens": 224,
+          "output_chars": 1455,
+          "generation_ms": 2088.4,
+          "generation_tokens_per_second": 107.26,
+          "load_ms": 0.4
+        }
+      ]
+    }
+  },
+  "simultaneous": {
+    "arc": {
+      "ok": true,
+      "wall_ms": 2371.6,
+      "prompt_tokens": 50,
+      "prompt_ms": 41.8,
+      "output_tokens": 236,
+      "output_chars": 1563,
+      "generation_ms": 2325.2,
+      "generation_tokens_per_second": 101.5,
+      "load_ms": 0.5
+    },
+    "rtx": {
+      "ok": true,
+      "wall_ms": 2131.9,
+      "prompt_tokens": 50,
+      "prompt_ms": 41.4,
+      "output_tokens": 224,
+      "output_chars": 1455,
+      "generation_ms": 2086.2,
+      "generation_tokens_per_second": 107.37,
+      "load_ms": 0.9
+    }
+  },
+  "finished_at": "2026-11-22T01:07:24.903981+00:00"
+}
