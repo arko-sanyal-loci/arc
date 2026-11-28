@@ -1,0 +1,9 @@
+# Attribution and evidence provenance
+
+- Arc repository's existing `core/speculative_pipeline.py` header credits **ARKO** for architecture/principles and **CLAUDE** for implementation (session 2026-11-18). That attribution is preserved; this pack does not reassign authorship.
+- This evaluation scaffold is a new, separate contribution to the Arc repository. Arko Sanyal supplied its design direction; Codex implemented this change. It does not claim authorship of the existing Arc runtime or LOCI/TRS work.
+- Arko Sanyal supplied the project goals and requested the A/B evaluation, offline cache, and work/liability view.
+- The user's Gmail contains a Nov 25, 2026 message titled “LOCI & TRS v3.2 Parameter Tuning & Status Package.” It reports 20 seeds / 6,000 steps: EMA+hysteresis deadband without post-hoc blending/hold had mean error 0.0088 and 23/100 block regressions; adding a multi-hop tie-breaker had mean error 0.0107 and 26/100 regressions. This is a reported result, not independently reproduced here.
+- The requested `loci_trs_verification_package.zip` attachment was discoverable, but the connected mail tool reports the ZIP cannot be read. This pack does not claim to inspect or curate that ZIP. A separately available local 500-vs-10,000 trial-results archive is different evidence and is not substituted for the requested package.
+
+The LOCI learning-loop workflow reference is `mac-install/scripts/learning_loop.py` at commit `d344898f96db96f8ea13e33a5e8d098139fa4aac` in `arko-sanyal-loci/LOCI-MEMORY-ENGINE`. The source describes an ethics-first gate, known-solution lookup, predict-first forecast, bounded LOCI retrieval, and outcome recording after completion. These are credited to the existing LOCI design and are referenced here; this package contains no copied implementation.

@@ -1,5 +1,5 @@
 # Arc Runtime — Master Index
-*Generated: 2026-11-18*
+*Updated: 2026-11-27*
 
 ---
 
@@ -13,6 +13,14 @@
 | `core/engine_sync.py` | Loci ↔ SQLite ↔ /dev/shm sync on every Nth heartbeat tick | `EngineSync`, `EngineState`, `_ensure_tables()`, `_count_rows()` |
 | `core/gpu_offload.py` | VRAM query + RTX↔B70 offload policy + SHM staging | `GPUOffloadManager`, `SHMStager`, `decide_offload()`, `query_vram()`, `VRAMStats`, `OffloadDecision`, `OffloadDir` |
 | `core/api_provision.py` | Multi-provider gateway (LOCAL→NEXOS→XAI) | `APIProvisioner`, `APIKeys`, `Provider`, `ProviderHealth`, `ChatMessage`, `CompletionRequest`, `CompletionResponse`, `health_check_all()` |
+| `core/orientation.py` | Fresh local network and hardware orientation; privacy-filtered prompt context | `collect_orientation()`, `orientation_system_message()`, `orient_messages()` |
+| `core/profiles.py` | Read-only interaction profile loading | `load_profiles()`, `get_profile()` |
+| `core/offline_ledger.py` | Offline append-only work and evidence-linked liability cache | `record_work()`, `record_liability()`, `recent_work()`, `current_liabilities()` |
+| `data/member_profiles.json` | Local conversation-derived profiles (ignored by Git) | — |
+| `config/member_profiles.example.json` | Generic profile template | — |
+| `docs/INFERENCE_DIRECTOR_MAP.md` | Current inference paths, root-cause analysis, and parallel design map | — |
+| `docs/CREDITS_AND_PROVENANCE.md` | Credits and evidence limits | — |
+| `training/arc_dual_inference_ab/` | Synthetic A/B evaluation and run records; no model updates | — |
 | `loci/slp_encoding.py` | SLP register layout, heat encode/decode, L1 cache-line packing | `SLPRegister`, `ClassFlags`, `RoutingHint`, `heat_to_u16()`, `ALPHA`, `H_MAX` |
 | `loci/glassbox_ingest.py` | Gmail → Glassbox Compendium ingest pipeline | `NormalizedRecord`, `Package`, `dual_write()` |
 | `loci/dual_write.py` | Atomic Drive + Compendium storage | `DriveClient`, `CompendiumDB`, `dual_write()`, `DualWriteResult` |
@@ -38,6 +46,8 @@
 | `GET` | `/` | `root()` | Serves `app/static/index.html` (chat UI) |
 | `GET` | `/api/status` | `status()` | Heartbeat + engine + GPU + memory tier stats |
 | `GET` | `/api/health` | `health()` | Provider health (LOCAL / NEXOS / XAI) |
+| `GET` | `/api/orientation` | `orientation()` | Fresh local interface, route, CPU, memory, and GPU snapshot |
+| `GET` | `/api/profiles` | `profiles()` | Interaction profiles and related project links |
 | `POST` | `/api/chat` | `chat()` | Single-turn completion; body: `ChatRequest` |
 | `WS` | `/ws/chat` | `ws_chat()` | Streaming chat over WebSocket |
 | `GET` | `/api/memory/search` | `memory_search()` | Loci node search; params: `q`, `limit` |
@@ -49,17 +59,20 @@
 **`ChatRequest`**
 ```python
 class ChatRequest(BaseModel):
-    messages: list[dict]   # [{"role": "user"|"assistant", "content": str}]
-    stream:   bool = False
-    model:    str | None = None
+    messages: list[dict]   # [{"role": "system"|"user"|"assistant", "content": str}]
+    provider: str = "LOCAL"
+    model: str | None = None
+    max_tokens: int = 1024
+    temperature: float = 0.7
+    profile_id: str | None = None  # selected label; not authentication
 ```
 
 **`IngestRequest`**
 ```python
 class IngestRequest(BaseModel):
     content:  str
-    source:   str = "api"
-    metadata: dict = {}
+    category: str = "STANDARD"
+    project:  str = "default"
 ```
 
 ---

@@ -200,14 +200,18 @@ Antigravity 2.0 IDE connects automatically via `config/antigravity.json`.
 
 ## Bus sizing
 
-The `/dev/shm` inter-bus runs at **7.9 GB/s sustained**.  
-Mixed-fidelity tick traffic is **333.2 KB / 140ms** — the ring drains in **0.494ms**.
+The code uses `/dev/shm` for host-local shared memory. It does not provide
+transport between separate machines. The `7.9 GB/s` value below is a configured
+assumption, not a measured GPU-to-GPU or network result. The sizing script
+generates synthetic packets and measures CPU-side encoding; it does not measure
+the shared-memory bus or inference traffic.
 
 | Ring size | Tick buffer | Drain time |
 |---|---|---|
-| 4 MiB ✓ | 12.3× | 0.494ms |
+| 4 MiB (configured minimum) | derived from synthetic traffic assumptions | estimated using configured 7.9 GB/s |
 
-Benchmark: `python tests/bench_bus_fidelity.py`
+Sizing script: `python tests/bench_bus_fidelity.py`. For current router and
+director gaps, see [`docs/INFERENCE_DIRECTOR_MAP.md`](docs/INFERENCE_DIRECTOR_MAP.md).
 
 ---
 
@@ -235,3 +239,11 @@ Loci Memory Engine   ←── Arc Runtime  ←── Chat UI  │
 ## License
 
 MIT © [Billo Tech](https://billo.tech) · Built by [Arko Sanyal](https://github.com/arko-sanyal-loci)
+
+## Offline command-center ledger
+
+Arc's local command center exposes an append-only SQLite activity and evidence ledger at `data/arc_offline_cache.sqlite` (override with `ARC_OFFLINE_CACHE_DB`). It needs no network connection. Inference events retain metadata and a SHA-256 fingerprint of the request text, not prompt or response bodies. Liability records are locally entered claims with a source note or evidence reference; they are not legal determinations and have no upstream Gmail/accounting synchronization. The dashboard refreshes every five seconds while open. Keep the app bound to loopback for local-only operation.
+
+Profiles and the SQLite cache are stored under ignored `data/` paths. `config/member_profiles.example.json` is a generic template; user-specific profile data is not part of the repository.
+
+The synthetic A/B scaffold and provenance notes are under `training/arc_dual_inference_ab/`. It does not change weights or claim real inference speedup.

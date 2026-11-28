@@ -234,17 +234,21 @@ async def call_claude_api(message: str, context: list[dict]) -> AsyncIterator[st
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
+        system_context = [item.get("content", "") for item in context
+                          if item.get("role") == "system"]
+        conversation_context = [item for item in context if item.get("role") != "system"]
+        system_prompt = (
+            "You are the LOCI Arc Chat — Arc's inference director. Respond with precision, "
+            "ground answers in the supplied context, and keep uncertainty visible."
+        )
+        if system_context:
+            system_prompt += "\n\n" + "\n\n".join(system_context)
         payload = {
             "model": "claude-sonnet-4-6",
             "max_tokens": 2048,
             "stream": True,
-            "system": (
-                "You are the LOCI Arc Chat — the central intelligence hub of the "
-                "LOCI multi-agent system built on Arc B70 + RTX 5060 Ti. "
-                "Respond with precision. This is the antigravity layer — "
-                "lift every query to its semantic core before answering."
-            ),
-            "messages": context + [{"role": "user", "content": message}],
+            "system": system_prompt,
+            "messages": conversation_context + [{"role": "user", "content": message}],
         }
         async with client.stream("POST",
                                   "https://api.anthropic.com/v1/messages",
@@ -265,6 +269,10 @@ async def route_and_respond(
     verbose: bool = False,
 ) -> AsyncIterator[str]:
     """Route message and stream response from the right lane."""
+    # This standalone entry point is also an inference path; refresh the same
+    # local host orientation before choosing/sending to any lane.
+    from core.orientation import orientation_system_message
+    context = [{"role": "system", "content": orientation_system_message()}, *context]
     decision = route(message)
     if verbose:
         print(f"\n  [route] {decision.complexity} | {decision.reason}")
@@ -419,7 +427,7 @@ def main() -> None:
             print("Install fastapi + uvicorn: pip install fastapi uvicorn")
             sys.exit(1)
         import uvicorn
-        uvicorn.run(app, host="0.0.0.0", port=args.port)
+        uvicorn.run(app, host=os.environ.get("ARC_BIND_HOST", "127.0.0.1"), port=args.port)
     else:
         asyncio.run(terminal_chat(args.message))
 

@@ -329,8 +329,11 @@ class APIProvisioner:
         if provider == Provider.NEXOS and key:
             headers["X-Api-Key"] = key
 
-        # Build raw messages list
-        raw_msgs: list[dict] = [{"role": m.role, "content": m.content} for m in req.messages]
+        # Refresh local spatial/hardware orientation on every inference, including
+        # requests that reach this provisioner outside the dashboard UI.
+        from core.orientation import orient_messages
+        oriented = orient_messages(req.messages, req.metadata.get("interaction_profile"))
+        raw_msgs: list[dict] = [{"role": m.role, "content": m.content} for m in oriented]
         raw_tools = req.tools or []
 
         # Apply prompt caching breakpoints for Claude-family models
@@ -414,7 +417,9 @@ class APIProvisioner:
         if provider == Provider.NEXOS and key:
             headers["X-Api-Key"] = key
 
-        raw_msgs2: list[dict] = [{"role": m.role, "content": m.content} for m in req.messages]
+        from core.orientation import orient_messages
+        oriented = orient_messages(req.messages, req.metadata.get("interaction_profile"))
+        raw_msgs2: list[dict] = [{"role": m.role, "content": m.content} for m in oriented]
         raw_tools2 = req.tools or []
 
         cache2 = PromptCacheLayer(

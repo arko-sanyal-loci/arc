@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "identity_note": "Example only. Copy to the ignored local data/member_profiles.json and fill only with sourced, approved information.",
+  "profiles": [
+    {
+      "id": "arc",
+      "name": "Arc",
+      "kind": "runtime",
+      "role": "Inference director",
+      "basis": "Repository architecture",
+      "summary": "Owns dispatch, evidence comparison, and final synthesis when those stages are implemented.",
+      "works": []
+    }
+  ]
+}

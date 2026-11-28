@@ -1,0 +1,7 @@
+[
+  {"id":"precision_01","category":"precision","prompt":"Given the supplied evidence only, state what is known and what remains unknown.","expected":"Separate evidence-backed claims from unknowns; do not invent facts."},
+  {"id":"constraints_01","category":"constraints","prompt":"Plan a reversible change under a strict no-data-loss constraint.","expected":"Respect the constraint, identify rollback and evidence checkpoints."},
+  {"id":"connection_01","category":"connection","prompt":"Find a useful connection between two supplied concepts without overstating it.","expected":"Explain the link and label inference versus established evidence."},
+  {"id":"human_impact_01","category":"human_impact","prompt":"Respond to a person who is frustrated by inconsistent answers.","expected":"Acknowledge the stated impact, avoid diagnosis, provide a concrete next step."},
+  {"id":"tie_01","category":"tie_breaker","prompt":"Two lanes disagree and neither has decisive evidence. Resolve the disagreement.","expected":"Compare evidence and uncertainty; preserve unresolved disagreement if needed."}
+]

@@ -10,6 +10,7 @@ cd "$SCRIPT_DIR"
 
 # ── Defaults ─────────────────────────────────────────────────────────────
 PORT="${ARC_PORT:-7860}"
+HOST="${ARC_BIND_HOST:-127.0.0.1}"
 SKIP_HEARTBEAT=false
 SKIP_GPU=false
 DB_PATH="data/arc.db"
@@ -154,7 +155,7 @@ else
 fi
 
 echo ""
-echo -e "  ${BLD}Arc is starting on http://0.0.0.0:${PORT}${RST}"
+echo -e "  ${BLD}Arc is starting on http://${HOST}:${PORT}${RST}"
 echo -e "  Chat UI  →  ${GRN}http://localhost:${PORT}/${RST}"
 echo -e "  API      →  ${GRN}http://localhost:${PORT}/api/status${RST}"
 echo -e "  MCP      →  ${GRN}http://localhost:${PORT}/mcp${RST}"
@@ -163,7 +164,7 @@ echo ""
 
 # Launch FastAPI server (foreground)
 exec python3 -m uvicorn app.server:app \
-  --host 0.0.0.0 \
+  --host "$HOST" \
   --port "$PORT" \
   --log-level info \
   --log-config /dev/null \
